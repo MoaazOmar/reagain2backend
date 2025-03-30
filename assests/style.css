@@ -1,0 +1,15 @@
+.custom-card {
+    width: 18rem; /* Fixed width for all cards */
+    margin-top: 12px; /* Margin at the top */
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* Subtle box shadow */
+    transition: transform 0.2s; /* Smooth animation on hover */
+}
+
+.custom-card:hover {
+    transform: scale(1.05); /* Slight zoom on hover */
+}
+
+.card-img-top {
+    height: 200px; /* Fixed height for images */
+    object-fit: cover; /* Maintain aspect ratio and fill space */
+}
