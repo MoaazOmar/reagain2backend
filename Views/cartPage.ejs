@@ -1,0 +1,23 @@
+<form method="POST" action="/admin/orders">
+    <div class="form-group">
+        <label for="custmorName">Customer Name</label>
+        <input type="text" id="custmorName" name="custmorName" class="form-control" placeholder="Enter your name" required>
+    </div>
+    <div class="form-group">
+        <label for="address">Address</label>
+        <textarea id="address" name="address" class="form-control" placeholder="Enter your address" required></textarea>
+    </div>
+
+    <h3>Order Summary</h3>
+    <ul>
+        <% items.forEach(item => { %>
+            <input type="hidden" name="name" value="<%= item.name %>">
+            <input type="hidden" name="price" value="<%= item.price %>">
+            <input type="hidden" name="productID" value="<%= item._id %>">
+            <input type="hidden" name="amount" value="<%= item.amount %>">
+            <li><%= item.name %> x <%= item.amount %> - <%= item.price * item.amount %> 🇪🇬</li>
+        <% }) %>
+    </ul>
+
+    <button type="submit" class="btn btn-primary">Place Order</button>
+</form>

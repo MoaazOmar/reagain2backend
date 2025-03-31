@@ -1,0 +1,66 @@
+<%- include('parts/header') %>
+<%- include('parts/navbar') %>
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Product List</title>
+    <link rel="stylesheet" href="/css/bootstrap.min.css">
+</head>
+<body>
+    <div class="container mt-5">
+        <h2>Product Management</h2>
+        <% if (messages.success.length > 0) { %>
+            <div class="alert alert-success"><%= messages.success %></div>
+        <% } %>
+        <% if (messages.error.length > 0) { %>
+            <div class="alert alert-danger"><%= messages.error %></div>
+        <% } %>
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Color</th>
+                    <th>Price</th>
+                    <th>Description</th>
+                    <th>Category</th>
+                    <th>Gender</th>
+                    <th>Stock</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                <% products.forEach(product => { %>
+                    <tr>
+                        <form action="/admin/productList/update" method="POST">
+                            <input type="hidden" name="productId" value="<%= product._id %>">
+                            <td><input type="text" name="name" value="<%= product.name %>"></td>
+                            <td><input type="text" name="color" value="<%= product.color %>"></td>
+                            <td><input type="number" name="price" value="<%= product.price %>"></td>
+                            <td><input type="text" name="description" value="<%= product.description %>"></td>
+                            <td><input type="text" name="category" value="<%= product.category %>"></td>
+                            <td>
+                                <select name="gender">
+                                    <option value="Male" <%= product.gender.includes('Male') ? 'selected' : '' %>>Male</option>
+                                    <option value="Female" <%= product.gender.includes('Female') ? 'selected' : '' %>>Female</option>
+                                    <option value="Unisex" <%= product.gender.includes('Unisex') ? 'selected' : '' %>>Unisex</option>
+                                </select>
+                            </td>
+                            <td>
+                                <select name="stock">
+                                    <option value="true" <%= product.stock ? 'selected' : '' %>>In Stock</option>
+                                    <option value="false" <%= !product.stock ? 'selected' : '' %>>Out of Stock</option>
+                                </select>
+                            </td>
+                            <td><button type="submit" class="btn btn-success btn-sm">Update</button></td>
+                        </form>
+                    </tr>
+                <% }) %>
+            </tbody>
+        </table>
+    </div>
+</body>
+</html>
+
+<%- include('parts/footer') %>

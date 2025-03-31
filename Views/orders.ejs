@@ -1,0 +1,75 @@
+<%- include('parts/header') %>
+<%- include('parts/navbar') %>
+
+<div class="container">
+    <% if (messages.error && messages.error.length > 0) { %>
+    <div class="alert alert-danger">
+        <% messages.error.forEach(function(error) { %>
+        <p><%= error %></p>
+        <% }) %>
+    </div>
+    <% } %>
+
+    <% if (messages.success && messages.success.length > 0) { %>
+    <div class="alert alert-success"><%= messages.success %></div>
+    <% } %>
+    <h2>Filter</h2>
+    <form action="/admin/orders" method="GET">
+        <select name="status" class="form-control">
+            <option value="Pending">Pending</option>
+            <option value="Shipped">Shipped</option>
+            <option value="Delivered">Delivered</option>
+            <option value="Canceled">Canceled</option>
+            <option value="All">All</option>
+        </select>
+        <input type="text" class="form-control" name="custmorName" placeholder="Name Of The Customer">
+        <input type="submit" class="btn btn-primary">
+    </form>
+
+
+    <h2>Orders</h2>
+
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Customer Name</th>
+                <th>Address</th>
+                <th>Order ID</th>
+                <th>User</th>
+                <th>ProductID</th>
+                <th>Amount</th>
+                <th>Status</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            <% orders.forEach(order => { %>
+            <tr>
+                <td><%= order.custmorName %></td>
+                <td><%= order.address %></td>
+                <td><%= order._id %></td>
+                <td><%= order.username %> (<%= order.name %>)</td>
+                <td><%= order.productID %></td>
+                <td><%= order.amount %></td>
+                <td><%= order.status %></td>
+                <td>
+                    <form method="POST" action="/admin/orders/update"> 
+                        <input type="hidden" name="orderId" value="<%= order._id %>">
+                        <select name="status" class="form-control">
+                            <option value="Pending" <%= order.status === 'Pending' ? 'selected' : '' %>>Pending</option>
+                            <option value="Shipped" <%= order.status === 'Shipped' ? 'selected' : '' %>>Shipped</option>
+                            <option value="Delivered" <%= order.status === 'Delivered' ? 'selected' : '' %>>Delivered
+                            </option>
+                            <option value="Cancelled" <%= order.status === 'Cancelled' ? 'selected' : '' %>>Cancelled
+                            </option>
+                        </select>
+                        <button type="submit" class="btn btn-primary">Update</button>
+                    </form>
+                </td>
+            </tr>
+            <% }) %>
+        </tbody>
+    </table>
+</div>
+
+<%- include('parts/footer') %>

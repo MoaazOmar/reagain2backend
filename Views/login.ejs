@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Animated Login Form</title>
+    <link href="https://th.bing.com/th/id/OIP.TA3Z8NEdfJZ8jTs3j32sIAHaEK?rs=1&pid=ImgDetMain"
+        rel="stylesheet">
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background: #a6998a;
+            font-family: 'Poppins', sans-serif;
+        }
+        form{
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background: #a6998a;
+            font-family: 'Poppins', sans-serif;
+            width:100%;
+            height: 100%;
+        }
+        .container {
+            position: absolute;
+            width: 90%;
+            max-width: 350px;
+            height: auto;
+            max-height: 300px;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        @media (max-width: 700px) {
+            .container {
+                max-width: 280px;
+                left: 40%;
+            }
+        }
+
+        .login-form {
+            width: 85%;
+            height: 100%;
+            background: #a6998a;
+            border-radius: 10px;
+            padding: 40px;
+
+            box-shadow: 5px 5px 15px #735040, -5px -5px 15px #d9d8c1;
+
+            transition: transform 0.5s ease-in-out;
+        }
+
+        .login-form:hover {
+            transform: translateZ(50px);
+        }
+
+        h2 {
+            margin: 0;
+            font-weight: 500;
+            text-align: center;
+            margin-bottom: 20px;
+            color: #000;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .input-group {
+            position: relative;
+            margin-bottom: 30px;
+        }
+
+        .input-group input {
+            width: 100%;
+            padding: 10px 20px;
+            border: none;
+            border-bottom: 2px solid #000;
+            background: transparent;
+            outline: none;
+            color: #000;
+            font-size: 18px;
+            transition: 0.3s ease-in-out;
+        }
+
+        .input-group input:focus {
+            border-bottom-color: #0011ff;
+        }
+
+        .input-group label {
+            position: absolute;
+            left: 20px;
+            top: 10px;
+            color: #000;
+            font-size: 18px;
+            pointer-events: none;
+            transition: 0.3s ease-in-out;
+        }
+
+        .input-group input:focus~label,
+        .input-group input:valid~label {
+            top: -20px;
+            left: 10px;
+            font-size: 14px;
+            color: #0011ff;
+            font-weight: 600;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 10px 20px;
+            border: none;
+            outline: none;
+            background: #0011ff;
+            color: #fff;
+            font-size: 18px;
+            font-weight: 500;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: transform 0.3s ease-in-out;
+            transition: all 0.3s ease;
+            box-shadow: 3px 3px 8px #735949, -3px -3px 8px #d9d0c1;
+            text-transform: uppercase;
+            letter-spacing: 1.4px;
+        }
+
+        .btn:hover {
+            background: #2980b9;
+        }
+
+        .btn:active {
+            background: transparent;
+            color: #1900ff;
+            font-weight: 600;
+            box-shadow: inset 3px 3px 8px #735949, inset -3px -3px 8px #d9d0c1;
+
+        }
+
+        .forgot-pass {
+            text-align: center;
+            margin-top: 10px;
+            color: #333;
+            font-size: 14px;
+        }
+
+        .forgot-pass a {
+            color: #1900ff;
+            text-decoration: none;
+        }
+        .alert-danger{
+            color:red;
+            margin-bottom:20px;
+            background-color: white;
+        }
+    </style>
+</head>
+
+<body>
+    <form action="/login" method="POST">
+        
+        <div class="container">
+            <% if (messages.success) { %>
+                <div class="alert alert-success" style="color:green; background-color: white; padding:5px"><%= messages.success %></div>
+            <% } %>
+            <% if (messages.error) { %>
+                <div class="alert alert-danger"><%= messages.error %></div>
+            <% } %>
+            
+            <div class="login-form">
+                <h2>Login</h2>
+                <div class="input-group">
+                    <input type="text" name="username" required>
+                    <label>Username</label>
+                </div>
+                <div class="input-group">
+                    <input type="password" name="password" required>
+                    <label>Password</label>
+                    <div class="forgot-pass">
+                        Forgot your password? <a href="/">Click Here</a>
+                      </div>
+    
+                </div>
+                <button class="btn" type="submit">Login</button>
+                <div class="forgot-pass">
+                  don't have an account  <a href="/signup">Create Account</a>
+                </div>
+            </div>
+        </div>
+    </form>
+</body>
+
+</html>
