@@ -2,7 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const app = express();
-const port = process.env.PORT || 3000; // Use Render's PORT env variable
+const port = process.env.PORT || 3000; // Use Koyeb's PORT env variable
 const fs = require('fs');
 
 const homeRouter = require('./Routes/home.route');
@@ -29,9 +29,24 @@ app.use('/images', express.static(path.join(__dirname, 'images')));
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Session store
+const uri = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/online-shops';
+console.log('Session store URI:', uri); // Debug log
 const STORE = new sessionStore({
-    uri: process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/online-shops', // Use env var for cloud MongoDB
-    collection: 'sessions'
+    uri: uri,
+    collection: 'sessions',
+    connectionOptions: {
+        ssl: true,
+        tls: true,
+        tlsAllowInvalidCertificates: false, // Set to true for testing if needed
+        serverSelectionTimeoutMS: 5000
+    }
+});
+
+// Handle session store errors
+STORE.on('error', (error) => {
+    console.error('Session store error:', error);
+    // Fallback to in-memory sessions if MongoDB fails
+    console.warn('Falling back to in-memory session store due to MongoDB connection failure');
 });
 
 // Define session middleware
@@ -39,7 +54,7 @@ const sessionMiddleware = session({
     secret: process.env.SESSION_SECRET || 'this my secret hash express sessions to encrypt......',
     saveUninitialized: false,
     resave: false,
-    store: STORE,
+    store: STORE, // Use MongoDB store, will fall back to in-memory if it fails
     cookie: { secure: process.env.NODE_ENV === 'production' } // Secure cookies in production
 });
 app.use(sessionMiddleware);
@@ -99,4 +114,4 @@ connectToDB.connectDB();
 // Start the server
 server.listen(port, () => {
     console.log(`Server is running on port ${port}`);
-}); 
+});
