@@ -6,7 +6,10 @@ const {deleteAllCartProducts} = require('../Models/cart.model')
 
 exports.getCart = async (req, res, next) => {
     try {
+        console.log('Session user after many modification:', req.session.user); // Debug session
         const items = await getItemsByUser(req.session.user.id) || [];
+        console.log('Session user after many modification:', req.session.user); // Debug session
+        console.log('Cart items from database:', items); // Debug cart items
         res.status(200).json({
             messages: {
                 error: req.flash('error'),
@@ -21,7 +24,8 @@ exports.getCart = async (req, res, next) => {
         console.error('Error fetching cart items', error);
         res.status(500).json({ message: 'Failed to fetch cart items' });
     }
-};exports.postCart = async (req, res, next) => {
+};
+exports.postCart = async (req, res, next) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
         return res.status(400).json({
@@ -36,7 +40,6 @@ exports.getCart = async (req, res, next) => {
             price: req.body.price,
             productID: req.body.productID,
             userID: req.session.user.id,
-            color: req.body.color,
             image: req.body.image,
             timestamp: Date.now()
         });
@@ -47,7 +50,6 @@ exports.getCart = async (req, res, next) => {
         res.status(500).json({ message: 'Failed to add item to cart. Please try again.' });
     }
 };
-
 
 exports.postSave = async (req, res, next) => {
     const errors = validationResult(req);

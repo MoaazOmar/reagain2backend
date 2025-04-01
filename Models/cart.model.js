@@ -7,7 +7,6 @@ const cartSchema = mongoose.Schema({
     amount: Number,
     userID: String,
     productID: String,
-    color:String,
     image: String,
     timestamp: {
         type: Date,

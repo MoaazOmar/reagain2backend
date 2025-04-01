@@ -20,7 +20,6 @@ const orderSchema = new mongoose.Schema({
         price: Number,
         amount: Number,
         image:String,
-        color:String,
         status: { type: String, enum: ['Pending', 'Shipped', 'Delivered', 'Cancelled'], default: 'Pending' } // Include status here
     }]
 });

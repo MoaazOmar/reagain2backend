@@ -51,7 +51,6 @@ exports.placeOrder = async (req, res, next) => {
                 price: item.price,
                 amount: item.amount,
                 image:item.image,
-                color:item.color,
                 status: 'Pending' // Status for each item
             }))
         };        
