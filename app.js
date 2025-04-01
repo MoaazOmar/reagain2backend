@@ -52,7 +52,10 @@ const sessionMiddleware = session({
     store: STORE,
     cookie: { secure: process.env.NODE_ENV === 'production' }
 });
-app.use(sessionMiddleware);
+app.use((req, res, next) => {
+    console.log('Applying session middleware for:', req.url);
+    sessionMiddleware(req, res, next);
+});
 
 app.use(express.json());
 
@@ -86,14 +89,33 @@ io.on('connection', (socket) => {
     });
 });
 
+console.log('Registering routes...');
 app.use('/cart', cartRouter);
+console.log('Cart route registered');
 app.use('/auth', authRouter);
+console.log('Auth route registered');
 app.use('/product', productRouter);
+console.log('Product route registered');
 app.use('/products', allProductRouter);
+console.log('Products route registered');
 app.use('/admin', adminRouter);
+console.log('Admin route registered');
 app.use('/form', formRouter);
+console.log('Form route registered');
 app.use('/order', orderRouter);
+console.log('Order route registered');
 app.use('/', homeRouter);
+console.log('Home route registered');
+
+app.use((req, res, next) => {
+    console.log('Route not found:', req.url);
+    res.status(404).json({ message: `Cannot ${req.method} ${req.url}` });
+});
+
+app.use((err, req, res, next) => {
+    console.error('Global error handler:', err.stack);
+    res.status(500).json({ message: 'Internal Server Error', error: err.message });
+});
 
 connectToDB.connectDB();
 
