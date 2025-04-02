@@ -57,7 +57,7 @@ app.use(sessionMiddleware);
 app.use(express.json());
 
 app.use(cors({
-    origin: 'https://moaazomar.github.io',
+    origin: 'https://moaazomar.github.io/FashionWebbsite',
     credentials: true
 }));
 
@@ -71,7 +71,7 @@ const server = http.createServer(app);
 const { Server } = require('socket.io');
 const io = new Server(server, {
     cors: {
-        origin: 'https://moaazomar.github.io',
+        origin: 'https://moaazomar.github.io/FashionWebbsite',
         methods: ['GET', 'POST'],
         credentials: true
     }
