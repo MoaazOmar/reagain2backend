@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
-const homeController = require('../Controllers/home.controller'); // Import the controller
+const homeController = require('../Controllers/home.controller');
 
-router.get('/', homeController.getHome); // Link to the getHome function
+router.get('/', homeController.getHome); 
 
 module.exports = router;
