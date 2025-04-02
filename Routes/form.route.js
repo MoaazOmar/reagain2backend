@@ -18,7 +18,7 @@ router.post(
     authGuard.isLoggedIn,
     check("custmorName").not().isEmpty().withMessage("Your name is Required"),
     check("address").not().isEmpty().withMessage("Your address is Required").isString({ min: 7 }).withMessage("Please try to provide more details with your address"),
-    formController.postForm // Fix here: should be formController instead of cartController
+    formController.postForm
 );
 
 module.exports = router;

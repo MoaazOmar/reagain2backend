@@ -2,6 +2,7 @@ const router = require('express').Router();
 const adminController = require('../Controllers/admin.controller');
 const adminGuard = require('./guards/admin.guard');
 
+// Protect the add-product route with adminGuard
 router.get('/add', adminGuard, adminController.getAdd);
 router.post('/add', adminGuard, adminController.postAdd);
 router.get('/orders', adminGuard, adminController.getOrders);
@@ -11,9 +12,6 @@ router.get('/productList', adminGuard, adminController.getProductList);
 router.post('/productList/update', adminGuard, adminController.updateProduct);
 router.get('/dashboard-stats', adminGuard, adminController.getDashboardStats);
 router.get('/top-selling-products', adminGuard, adminController.getTopSellingProducts);
-
-router.get('/test', (req, res) => {
-    res.status(200).json({ message: 'Admin route is working' });
-});
+router.post('/productList/updateStock', adminGuard, adminController.updateProductStock);
 
 module.exports = router;

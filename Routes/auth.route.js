@@ -6,8 +6,10 @@ const bodyParser = require('body-parser');
 
 const bodyParserMW = bodyParser.urlencoded({ extended: true });
 
-router.get('/signup', authController.getSignup);
+// Prevent logged-in users from accessing signup and login pages
+router.get('/signup',  authController.getSignup);
 router.post('/signup',
+    
     bodyParserMW,
     [
         check('username').notEmpty().withMessage('Username is required'),
@@ -23,13 +25,11 @@ router.post('/signup',
     authController.postSignup
 );
 
-router.get('/login', authController.getLogin);
-router.post('/login', bodyParserMW, authController.postLogin);
+// Prevent logged-in users from accessing login
+router.get('/login',  authController.getLogin);
+router.post('/login',  bodyParserMW, authController.postLogin);
 
-router.all('/logout', authController.logout);
-
-router.get('/test', (req, res) => {
-    res.status(200).json({ message: 'Auth route is working' });
-});
+// Allow only logged-in users to logout
+router.all('/logout',  authController.logout);
 
 module.exports = router;
