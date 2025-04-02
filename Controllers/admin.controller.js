@@ -17,7 +17,7 @@ const {
     Product
 } = require('../Models/products.model');
 const fs = require('fs');
-const path = require('path'); 
+const path = require('path');
 
 
 exports.getAdd = (req, res, next) => {
@@ -32,42 +32,59 @@ exports.getAdd = (req, res, next) => {
 };
 
 exports.postAdd = [
-    upload.array('image', 10), // Allow up to 10 images
+    upload.array('image', 10),
     async (req, res) => {
-      try {
-        if (!req.files || req.files.length === 0) {
-          return res.status(400).json({ message: 'At least one image is required' });
+        try {
+            if (!req.files || req.files.length === 0) {
+                return res.status(400).json({
+                    message: 'At least one image is required'
+                });
+            }
+
+            const images = req.files.map(file => file.filename);
+            const {
+                name,
+                category,
+                brand,
+                price,
+                season,
+                gender,
+                description,
+                descriptionDetailed,
+                sizes,
+                colors,
+                stock
+            } = req.body;
+
+            const newProduct = new Product({
+                name,
+                image: images,
+                category,
+                brand,
+                price: Number(price),
+                season,
+                gender: JSON.parse(gender),
+                description,
+                descriptionDetailed,
+                sizes: JSON.parse(sizes),
+                colors: JSON.parse(colors),
+                stock: Number(stock)
+            });
+
+            await newProduct.save();
+            res.status(201).json({
+                message: 'Product created successfully',
+                product: newProduct
+            });
+        } catch (error) {
+            console.error('Error Creating Product:', error);
+            res.status(500).json({
+                message: 'Internal server error'
+            });
         }
-  
-        const images = req.files.map(file => file.filename);
-        const { name, category, brand, price, quantity, season, gender, description, descriptionDetailed, sizes, colors } = req.body;
-  
-        const newProduct = new Product({
-          name,
-          image: images, // Array of image filenames
-          category,
-          brand,
-          price: Number(price),
-          quantity: Number(quantity),
-          season,
-          gender: JSON.parse(gender), // Parse JSON string to array
-          description,
-          descriptionDetailed,
-          sizes: JSON.parse(sizes), // Parse JSON string to array
-          colors: JSON.parse(colors), // Parse JSON string to array
-          stock: quantity > 0 // Set stock based on quantity
-        });
-  
-        await newProduct.save();
-        res.status(201).json({ message: 'Product created successfully', product: newProduct });
-      } catch (error) {
-        console.error('Error Creating Product:', error);
-        res.status(500).json({ message: 'Internal server error' });
-      }
     }
-  ];
-  
-    
+];
+
 exports.getOrders = async (req, res, next) => {
     try {
         let status = req.query.status;
@@ -83,7 +100,7 @@ exports.getOrders = async (req, res, next) => {
             // We use .find() as it's sepcify for object so we can use .sort()
             orders = await Order.find().sort({
                 timestamp: -1
-            }).limit(5);
+            })
         }
 
         res.status(200).json({
@@ -194,80 +211,118 @@ exports.getProductList = async (req, res, next) => {
 exports.updateProduct = [
     upload.array('image', 10),
     async (req, res, next) => {
-      const { productId, name, colors, price, description, category, season, gender, sizes, quantity, stock } = req.body;
-      try {
-        await connectDB();
-  
-        // Parse imagesToDelete if provided
-        let imagesToDelete = [];
-        if (req.body.imagesToDelete) {
-          imagesToDelete = JSON.parse(req.body.imagesToDelete);
-          // Delete files from filesystem
-          await Promise.all(imagesToDelete.map(filename => 
-            fs.promises.unlink(path.join(__dirname, '../images', filename)).catch(err => console.error(`Failed to delete ${filename}:`, err))
-          ));
+        const {
+            productId,
+            name,
+            colors,
+            price,
+            description,
+            category,
+            season,
+            gender,
+            sizes,
+            stock
+        } = req.body;
+        try {
+            await connectDB();
+
+            let imagesToDelete = [];
+            if (req.body.imagesToDelete) {
+                imagesToDelete = JSON.parse(req.body.imagesToDelete);
+                await Promise.all(imagesToDelete.map(filename =>
+                    fs.promises.unlink(path.join(__dirname, '../images', filename)).catch(err => console.error(`Failed to delete ${filename}:`, err))
+                ));
+            }
+
+            const updateData = {
+                name,
+                colors: colors ? JSON.parse(colors) : undefined,
+                price: Number(price),
+                description,
+                category,
+                season,
+                gender: gender ? JSON.parse(gender) : undefined,
+                sizes: sizes ? JSON.parse(sizes) : undefined,
+                stock: Number(stock)
+            };
+
+            const product = await Product.findById(productId);
+            if (!product) {
+                return res.status(404).json({
+                    message: 'Product not found'
+                });
+            }
+
+            if (imagesToDelete.length > 0) {
+                product.image = product.image.filter(img => !imagesToDelete.includes(img));
+                updateData.image = product.image;
+            }
+
+            if (req.files && req.files.length > 0) {
+                const newImages = req.files.map(file => file.filename);
+                updateData.image = [...(updateData.image || product.image), ...newImages];
+            }
+
+            const updatedProduct = await Product.findByIdAndUpdate(productId, updateData, {
+                new: true
+            });
+
+            res.status(200).json({
+                message: 'Product updated successfully',
+                product: updatedProduct
+            });
+        } catch (error) {
+            console.error('Error updating product:', error);
+            res.status(500).json({
+                message: 'Failed to update product'
+            });
         }
-  
-        // Prepare update data
-        const updateData = {
-          name,
-          colors: colors ? JSON.parse(colors) : undefined,
-          price: Number(price),
-          description,
-          category,
-          season,
-          gender: gender ? JSON.parse(gender) : undefined,
-          sizes: sizes ? JSON.parse(sizes) : undefined,
-          quantity: Number(quantity),
-          stock: stock === 'true'
-        };
-  
-        // Fetch the current product
-        const product = await Product.findById(productId);
-        if (!product) {
-          return res.status(404).json({ message: 'Product not found' });
-        }
-  
-        // Remove deleted images from the existing image array
-        if (imagesToDelete.length > 0) {
-          product.image = product.image.filter(img => !imagesToDelete.includes(img));
-          updateData.image = product.image; // Update the image array in updateData
-        }
-  
-        // Add new images if uploaded
-        if (req.files && req.files.length > 0) {
-            const newImages = req.files.map(file => file.filename);
-            updateData.image = [...(updateData.image || product.image), ...newImages]; // Append new images
-          }
-          
-            
-        // Update the product
-        const updatedProduct = await Product.findByIdAndUpdate(productId, updateData, { new: true });
-  
-        res.status(200).json({ message: 'Product updated successfully', product: updatedProduct });
-      } catch (error) {
-        console.error('Error updating product:', error);
-        res.status(500).json({ message: 'Failed to update product' });
-      } 
     }
-  ];  
-  
+];
+exports.updateProductStock = async (req, res, next) => {
+    try {
+        const {
+            productID,
+            amount
+        } = req.body;
+        // Find the product by its ID
+        const product = await Product.findById(productID);
+        if (!product) {
+            return res.status(404).json({
+                message: 'Product not found'
+            });
+        }
+        // Reduce the stock by the amount ordered
+        product.stock = product.stock - Number(amount);
+        await product.save();
+        res.status(200).json({
+            message: 'Product stock updated successfully',
+            product
+        });
+    } catch (error) {
+        console.error('Error updating product stock:', error);
+        res.status(500).json({
+            message: 'Failed to update product stock'
+        });
+    }
+};
+
 exports.getDashboardStats = async (req, res, next) => {
     try {
         // 1. Total Sales (sum of totalPrice for Delivered orders)
         const deliveredOrders = await Order.find({
             status: 'Delivered'
         });
-        console.log('Delivered Orders:', deliveredOrders); // Log the delivered orders
+        console.log('Delivered Orders:', deliveredOrders);
         const totalSales = deliveredOrders.reduce((sum, order) => sum + (order.totalPrice || 0), 0);
         console.log('Total Sales:', totalSales);
 
         // Total Sales for the current week
         const startOfThisWeek = new Date();
         startOfThisWeek.setHours(0, 0, 0, 0);
-        startOfThisWeek.setDate(startOfThisWeek.getDate() - startOfThisWeek.getDay()); // Start of this week (Sunday)
+        startOfThisWeek.setDate(startOfThisWeek.getDate() - startOfThisWeek.getDay());
         const endOfThisWeek = new Date(startOfThisWeek);
-        endOfThisWeek.setDate(startOfThisWeek.getDate() + 6); // End of this week (Saturday)
+        endOfThisWeek.setDate(startOfThisWeek.getDate() + 6);
         console.log('This Week Range:', startOfThisWeek, 'to', endOfThisWeek);
 
         const thisWeekSales = await Order.find({
@@ -373,12 +428,31 @@ exports.getDashboardStats = async (req, res, next) => {
         const totalInventory = await Product.countDocuments();
         console.log('Total Inventory (Products):', totalInventory);
 
-        const lowStockItems = await Product.countDocuments({
-            stock: false
-        });
-        console.log('Low Stock Items:', lowStockItems);
+        // Debug: Verify ALL product stock values
+        const allProducts = await Product.find({}, 'name stock -_id'); // Only get name & stock
+        console.log('All Products Stock Verification:', allProducts);
 
-        // Final response
+        // Count low stock items (stock > 0 and <= 20)
+        const lowStockItems = await Product.countDocuments({
+            stock: {
+                $gt: 0, // Explicitly greater than 0
+                $lte: 20 // Less than or equal to 20
+            }
+        });
+        console.log('Corrected Low Stock Count:', lowStockItems);
+
+        // Debug: Show ACTUAL low stock items
+        const lowStockProducts = await Product.find({
+            stock: {
+                $gt: 0,
+                $lte: 20
+            }
+        }, 'name stock -_id');
+        console.log('Low Stock Products Verification:', lowStockProducts);
+
+        // =========================================================================
+        // Final Response (Rest remains same)
+        // =========================================================================
         const response = {
             totalSales,
             salesTrend: Number(salesTrend.toFixed(1)),
@@ -390,123 +464,141 @@ exports.getDashboardStats = async (req, res, next) => {
             visitorsTrend: Number(visitorsTrend.toFixed(1)),
             visitorsTrendDirection,
             totalInventory,
-            lowStockItems
+            lowStockItems // Now using corrected count
         };
-        console.log('Final Dashboard Stats Response:', response);
 
         res.status(200).json(response);
+
     } catch (error) {
-        console.error('Error fetching dashboard stats:', error);
+        console.error('Error in getDashboardStats:', error);
         res.status(500).json({
-            message: 'Failed to fetch dashboard stats'
+            message: 'Failed to load dashboard stats'
         });
     }
 };
 
 exports.getTopSellingProducts = async (req, res, next) => {
     try {
-        // 1. Ensure the database connection is established.
         await connectDB();
 
-        // 2. Aggregate orders to calculate total units sold and total revenue per product for delivered orders.
-        //    The aggregation groups by the productID, picks the first product name (assuming it's consistent)
-        //    and sums up the 'amount' (units sold) and 'price' (revenue) fields.
-        const productsSales = await Order.aggregate([
-            {
+        // Step 1: Aggregate delivered orders
+        const productsSales = await Order.aggregate([{
                 $match: {
-                    status: 'Delivered' // Match delivered orders
+                    status: 'Delivered'
                 }
             },
-            { $unwind: "$items" }, // Deconstruct the items array
             {
-                $match: {
-                    "items.status": "Delivered" // Ensure item status is Delivered (if applicable)
-                }
+                $unwind: "$items"
             },
+            // Removed: { $match: { "items.status": "Delivered" } },
             {
                 $group: {
-                    _id: '$items.productID', // Group by productID from items
-                    productName: { $first: '$items.name' },
-                    totalUnitsSold: { $sum: '$items.amount' }, // Sum the quantity sold
+                    _id: '$items.productID',
+                    productName: {
+                        $first: '$items.name'
+                    },
+                    totalUnitsSold: {
+                        $sum: '$items.amount'
+                    },
                     totalRevenue: {
-                        $sum: { $multiply: ['$items.price', '$items.amount'] } // Calculate revenue correctly
+                        $sum: {
+                            $multiply: ['$items.price', '$items.amount']
+                        }
                     }
                 }
             },
-            { $sort: { totalUnitsSold: -1 } },
-            { $limit: 5 }
+            {
+                $sort: {
+                    totalUnitsSold: -1
+                }
+            },
+            {
+                $limit: 5
+            }
         ]);
-        // 5. Calculate date ranges for trend analysis.
-        //    (a) This week range: from the start of the week (Sunday) to Saturday.
+        console.log('Products Sales Aggregation Result:', productsSales);
+
+        // Date ranges
         const startOfThisWeek = new Date();
         startOfThisWeek.setHours(0, 0, 0, 0);
         startOfThisWeek.setDate(startOfThisWeek.getDate() - startOfThisWeek.getDay());
         const endOfThisWeek = new Date(startOfThisWeek);
         endOfThisWeek.setDate(startOfThisWeek.getDate() + 6);
 
-        //    (b) Last week range: from the Sunday before this week to the following Saturday.
         const startOfLastWeek = new Date(startOfThisWeek);
         startOfLastWeek.setDate(startOfThisWeek.getDate() - 7);
         const endOfLastWeek = new Date(startOfLastWeek);
         endOfLastWeek.setDate(startOfLastWeek.getDate() + 6);
 
-        // 6. Aggregate sales for this week by matching delivered orders within the calculated date range.
-        const thisWeekSales = await Order.aggregate([
-            {
+        // Step 2: This week's sales
+        const thisWeekSales = await Order.aggregate([{
                 $match: {
                     status: 'Delivered',
-                    timestamp: { $gte: startOfThisWeek, $lte: endOfThisWeek }
+                    timestamp: {
+                        $gte: startOfThisWeek,
+                        $lte: endOfThisWeek
+                    }
                 }
             },
             {
+                $unwind: "$items"
+            },
+            // Removed: { $match: { "items.status": "Delivered" } },
+            {
                 $group: {
-                    _id: '$productID',
-                    totalUnitsSold: { $sum: '$amount' }
+                    _id: '$items.productID',
+                    totalUnitsSold: {
+                        $sum: '$items.amount'
+                    }
                 }
             }
         ]);
+        console.log('This Week Sales:', thisWeekSales);
 
-        // 7. Aggregate sales for last week using a similar approach.
-        const lastWeekSales = await Order.aggregate([
-            {
+        // Step 3: Last week's sales
+        const lastWeekSales = await Order.aggregate([{
                 $match: {
                     status: 'Delivered',
-                    timestamp: { $gte: startOfLastWeek, $lte: endOfLastWeek }
+                    timestamp: {
+                        $gte: startOfLastWeek,
+                        $lte: endOfLastWeek
+                    }
                 }
             },
             {
+                $unwind: "$items"
+            },
+            // Removed: { $match: { "items.status": "Delivered" } },
+            {
                 $group: {
-                    _id: '$productID',
-                    totalUnitsSold: { $sum: '$amount' }
+                    _id: '$items.productID',
+                    totalUnitsSold: {
+                        $sum: '$items.amount'
+                    }
                 }
             }
         ]);
+        console.log('Last Week Sales:', lastWeekSales);
 
-        // 8. Map each product from the aggregated results to include additional details like product price,
-        //    image, and calculate the sales trend between this week and last week.
+        // Step 4: Map products with trend
         const topProducts = await Promise.all(
-            productsSales.map(async (product) => {  // Correct variable name used here.
-                // Fetch additional product details from the Product collection.
-                const productDetails = await Product.findOne({ _id: product._id });
+            productsSales.map(async (product) => {
+                const productDetails = await Product.findOne({
+                    _id: product._id
+                });
                 const price = productDetails ? productDetails.price : 0;
                 const image = productDetails ? productDetails.image : '';
 
-                // Find the sales records for the current product in thisWeekSales and lastWeekSales.
-                // Convert ObjectIds to strings for accurate comparison.
-                const thisWeek = thisWeekSales.find(sale => sale._id.toString() === product._id.toString());
-                const lastWeek = lastWeekSales.find(sale => sale._id.toString() === product._id.toString());
+                const thisWeek = thisWeekSales.find(sale => sale._id?.toString() === product._id ?.toString());
+                const lastWeek = lastWeekSales.find(sale => sale._id?.toString() === product._id ?.toString());
                 const thisWeekUnits = thisWeek ? thisWeek.totalUnitsSold : 0;
                 const lastWeekUnits = lastWeek ? lastWeek.totalUnitsSold : 0;
 
-                // Calculate the sales trend as a percentage.
-                // If last week had sales, compute the percentage change.
-                // Otherwise, if there were any sales this week, set trend to 100.
-                const trend = lastWeekUnits > 0
-                    ? ((thisWeekUnits - lastWeekUnits) / lastWeekUnits) * 100
-                    : (thisWeekUnits > 0 ? 100 : 0);
+                const trend = lastWeekUnits > 0 ?
+                    ((thisWeekUnits - lastWeekUnits) / lastWeekUnits) * 100 :
+                    (thisWeekUnits > 0 ? 100 : 0);
                 const trendDirection = trend >= 0 ? 'up' : 'down';
 
-                // Return the product details combined with aggregated data and trend info.
                 return {
                     _id: product._id,
                     name: product.productName,
@@ -519,12 +611,12 @@ exports.getTopSellingProducts = async (req, res, next) => {
             })
         );
 
-        // Log the result and send the top products as a JSON response.
         console.log('Top Selling Products:', topProducts);
         res.status(200).json(topProducts);
     } catch (error) {
-        // Log the error and send a 500 response with a generic error message.
         console.error('Error fetching top selling products:', error);
-        res.status(500).json({ message: 'Failed to fetch top selling products' });
+        res.status(500).json({
+            message: 'Failed to fetch top selling products'
+        });
     }
 };
