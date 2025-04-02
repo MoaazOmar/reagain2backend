@@ -56,9 +56,10 @@ app.use(sessionMiddleware);
 
 app.use(express.json());
 
+
 app.use(cors({
-    origin: '*',
-    credentials: true
+    origin: 'https://moaazomar.github.io', // Exact origin of your Angular app
+    credentials: true // Allow credentials (cookies, etc.)
 }));
 
 app.use(flash());
@@ -71,7 +72,7 @@ const server = http.createServer(app);
 const { Server } = require('socket.io');
 const io = new Server(server, {
     cors: {
-        origin: '*',
+        origin: 'https://moaazomar.github.io',
         methods: ['GET', 'POST'],
         credentials: true
     }
