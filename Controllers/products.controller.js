@@ -104,8 +104,7 @@ exports.getProductsAndCarouselProducts = async (req, res, next) => {
       return [];
     });
 
-    let query = {};
-    if (gender && gender !== 'all') query.gender = gender;
+    let query = gender && gender !== 'all' ? { gender } : {};    
     if (color) query.color = { $regex: new RegExp(`^${color.trim()}$`, 'i') };
     if (category) query.category = { $regex: new RegExp(`^${category.trim()}$`, 'i') };
     if (search) {
