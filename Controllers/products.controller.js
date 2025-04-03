@@ -55,99 +55,104 @@ exports.getSingleProduct = async (req, res, next) => {
 };
 
 exports.getProductsAndCarouselProducts = async (req, res, next) => {
-    try {
-        const {
-            gender,
-            category,
-            page = 1,
-            limit = 4,
-            sort,
-            search,
-            color
-        } = req.query;
-        const skip = (page - 1) * limit;
+  try {
+    const { gender, category, page = 1, limit = 4, sort, search, color } = req.query;
+    const skip = (page - 1) * limit;
+    console.log('Query params:', { gender, category, page, limit, sort, search, color });
 
-        let products = [];
-
-        // Carousel products displaying 
-        if (gender && gender !== 'all') {
-            const mostLiked = await getMostLikedProducts(gender, 1);
-            const mostCommented = await getMostCommentedProducts(gender, 1);
-            const newest = await getNewestProducts(gender, 1);
-            const random = await getRandomProduct(gender);
-            products = [...mostLiked, ...mostCommented, ...newest, random];
-        } else {
-            products = await getAllProductsMixed();
-        }
-        // Fetch Most Liked and Most Recent Products
-        const mostLikedProducts = await getMostLikedProducts(gender || 'all', 4); // Top 4 most liked
-        const mostRecentProducts = await getNewestProducts(gender || 'all', 4); // Top 4 most recent
-        
-        // Fetch distinct categories with counts
-        // const categoriesWithCounts = await getDistinctProductsCategoriesWithCounts(gender || 'all');
-        // Fetch distinct Colors with counts
-        // const colorsWithCounts = await getDistinctColorsWithCounts(gender || 'all');
-
-        // Main products logic with pagination
-        let query = {};
-        if (gender && gender !== 'all') {
-            query.gender = gender;
-        }
-        if (color) {
-            query.color = { $regex: new RegExp(`^${color.trim()}$`, 'i') };
-        }
-        if (category) {
-            query.category = { $regex: new RegExp(`^${category.trim()}$`, 'i') };
-        }
-        if (search) {
-            query.$or = [
-                { name: { $regex: search, $options: 'i' } },
-                { description: { $regex: search, $options: 'i' } }
-            ];
-        }
-        let sortOptions = {};
-        switch (sort) {
-            case 'newest':
-                sortOptions = { _id: -1 };
-                break;
-            case 'price_asc':
-                sortOptions = { price: 1 };
-                break;
-            case 'price_desc':
-                sortOptions = { price: -1 };
-                break;
-            case 'oldest':
-                sortOptions = {_id: 1}
-                break;
-            default:
-                sortOptions = { _id: 1 };
-        }
-        const {mainProducts , total} = await getMainProducts(query, sortOptions, skip, limit)
-            // Use the same query to fetch dynamic counts:
-        const categoriesWithCounts = await getDistinctProductsCategoriesWithCounts(query);
-        const colorsWithCounts = await getDistinctColorsWithCounts(query);
-
-        res.status(200).json({
-            mostLikedProducts,
-            mostRecentProducts,
-            carouselProducts: products,
-            products: mainProducts,
-            totalPages: Math.ceil(total / limit),
-            currentPage: Number(page),
-            categoriesWithCounts:categoriesWithCounts,
-            colorsWithCounts: colorsWithCounts,
-            user: req.session.user || null,
-            isAdmin: req.session.user?.isAdmin || false
-        });
-
-    } catch (error) {
-        console.error('Error fetching carousel products:', error);
-        return res.status(500).json({
-            message: 'Internal server error'
-        });
+    let products = [];
+    if (gender && gender !== 'all') {
+      console.log('Fetching gendered carousel products');
+      const mostLiked = await getMostLikedProducts(gender, 1).catch(err => {
+        console.error('Most liked failed:', err);
+        return [];
+      });
+      const mostCommented = await getMostCommentedProducts(gender, 1).catch(err => {
+        console.error('Most commented failed:', err);
+        return [];
+      });
+      const newest = await getNewestProducts(gender, 1).catch(err => {
+        console.error('Newest failed:', err);
+        return [];
+      });
+      const random = await getRandomProduct(gender).catch(err => {
+        console.error('Random failed:', err);
+        return null;
+      });
+      products = [
+        ...(mostLiked || []),
+        ...(mostCommented || []),
+        ...(newest || []),
+        ...(random ? [random] : []),
+      ].filter(Boolean); // Remove null/undefined
+      console.log('Carousel products:', products.length);
+    } else {
+      console.log('Fetching mixed carousel products');
+      products = await getAllProductsMixed().catch(err => {
+        console.error('Mixed products failed:', err);
+        return [];
+      });
+      console.log('Mixed products:', products.length);
     }
-};
 
+    const mostLikedProducts = await getMostLikedProducts(gender || 'all', 4).catch(err => {
+      console.error('Most liked (4) failed:', err);
+      return [];
+    });
+    const mostRecentProducts = await getNewestProducts(gender || 'all', 4).catch(err => {
+      console.error('Most recent (4) failed:', err);
+      return [];
+    });
+
+    let query = {};
+    if (gender && gender !== 'all') query.gender = gender;
+    if (color) query.color = { $regex: new RegExp(`^${color.trim()}$`, 'i') };
+    if (category) query.category = { $regex: new RegExp(`^${category.trim()}$`, 'i') };
+    if (search) {
+      query.$or = [
+        { name: { $regex: search, $options: 'i' } },
+        { description: { $regex: search, $options: 'i' } },
+      ];
+    }
+    let sortOptions = {};
+    switch (sort) {
+      case 'newest': sortOptions = { _id: -1 }; break;
+      case 'price_asc': sortOptions = { price: 1 }; break;
+      case 'price_desc': sortOptions = { price: -1 }; break;
+      case 'oldest': sortOptions = { _id: 1 }; break;
+      default: sortOptions = { _id: 1 };
+    }
+
+    const { mainProducts, total } = await getMainProducts(query, sortOptions, skip, limit).catch(err => {
+      console.error('Main products failed:', err);
+      return { mainProducts: [], total: 0 };
+    });
+    const categoriesWithCounts = await getDistinctProductsCategoriesWithCounts(query).catch(err => {
+      console.error('Categories failed:', err);
+      return [];
+    });
+    const colorsWithCounts = await getDistinctColorsWithCounts(query).catch(err => {
+      console.error('Colors failed:', err);
+      return [];
+    });
+
+    res.status(200).json({
+      mostLikedProducts,
+      mostRecentProducts,
+      carouselProducts: products,
+      products: mainProducts,
+      totalPages: Math.ceil(total / limit),
+      currentPage: Number(page),
+      categoriesWithCounts,
+      colorsWithCounts,
+      user: req.session.user || null,
+      isAdmin: req.session.user?.isAdmin || false,
+    });
+  } catch (error) {
+    console.error('Unexpected error in getProductsAndCarouselProducts:', error);
+    return res.status(500).json({ message: 'Internal server error' });
+  }
+};
 exports.getSuggestionsProducts = async (req, res, next) => {
     try {
       const query = req.query.query;
