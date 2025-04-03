@@ -1,6 +1,7 @@
 const { Product, getAllProducts, getProductByID , getMostLikedProducts,getMostCommentedProducts,getNewestProducts,getRandomProduct,getAllProductsMixed 
 ,getMainProducts , getDistinctProductsCategoriesWithCounts , getDistinctColorsWithCounts ,  getSuggestionsProducts , getTotalCount , getRelatedProducts , toggleLikeProduct,
-toggleDislikeProduct} = require('../Models/products.model');
+toggleDislikeProduct , getWinterProductsData,
+        getSummerAndSpringProductsData} = require('../Models/products.model');
 
 exports.createProduct = async (req, res, next) => {
     try {
@@ -137,7 +138,16 @@ exports.getProductsAndCarouselProducts = async (req, res, next) => {
       categoriesWithCounts = [];
       colorsWithCounts = [];
     }
-
+    let winterCollection , summerCollection; 
+    try{
+      winterCollection =await getWinterProductsData(gender || 'all')
+      summerCollection = await getSummerAndSpringProductsData(gender || 'all')
+    }
+    catch(error){
+      console.error('Error fetching winterCollection , summerCollection:', error);
+      winterCollection = [];
+      summerCollection = [];
+    }
     res.status(200).json({
       mostLikedProducts,
       mostRecentProducts,

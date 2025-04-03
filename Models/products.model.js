@@ -655,7 +655,43 @@
           throw error;
         }
       };
-              
+      const getWinterProductsData = async (gender) => {
+        try {
+            const filter = { season: 'Winter' };
+            if (gender && gender !== 'all') {
+                filter.gender = gender;
+            }
+            await connectDB()
+            const products = await Product.find(filter)
+                .sort({ _id: 1 })
+                .limit(10);
+            return products;
+        } catch (error) {
+            console.error('Error fetching winter products:', error)
+            throw new Error(error.message); // Proper error construction
+        } finally {
+            await disconnectDB()
+        }
+    }
+    const getSummerAndSpringProductsData = async (gender) =>{
+        try{
+            await connectDB()
+            const filter = { season: { $in: ['Summer', 'Spring'] } };
+            if(gender && gender !== 'all') {
+                filter.gender = gender;
+            }
+            const products = await Product.find(filter).sort({_id: -1}).limit(15)
+            return products
+        }
+        catch(error){
+            console.error('Error fetching Summer products:', error)
+            throw new Error(error.message); // Proper error construction
+
+        }finally {
+            await disconnectDB()
+        }
+    }
+         
     module.exports = {
         Product,
         getAllProducts,
@@ -680,6 +716,7 @@
         toggleLoveComment,
         getRelatedProducts,
         toggleLikeProduct,
-        toggleDislikeProduct
-
+        toggleDislikeProduct,
+        getWinterProductsData,
+        getSummerAndSpringProductsData
     };
