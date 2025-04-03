@@ -154,73 +154,75 @@ exports.getProductsAndCarouselProducts = async (req, res, next) => {
   }
 };
 exports.getSuggestionsProducts = async (req, res, next) => {
-    try {
-      const query = req.query.query;
-      console.log('Received filters:', {
-        color: req.query.color,
-        category: req.query.category,
-        gender: req.query.gender,
-        sort: req.query.sort
-      });
-  
-      const filters = {
-        color: req.query.color ? req.query.color.split(',') : null,
-        category: req.query.category ? req.query.category.split(',') : null,
-        gender: req.query.gender ? req.query.gender.split(',') : null,
-        sort: req.query.sort
-      };
-  
-      const filterConditions = { name: { $regex: query || '', $options: 'i' } };
-      if (filters.color) {
-        filterConditions.color = { $in: filters.color.map(c => new RegExp(c, 'i')) };
-      }
-      if (filters.category) {
-        filterConditions.category = { $in: filters.category.map(c => new RegExp(c, 'i')) };
-      }
-      if (filters.gender) {
-        filterConditions.gender = { $in: filters.gender.map(g => new RegExp(`^${g}$`, 'i')) };
-      }
-  
-      const page = parseInt(req.query.page, 10) || 1;
-      const limit = parseInt(req.query.limit, 10) || 10;
-  
-      let sortOptions = {};
-      switch (filters.sort) {
-        case 'price_asc':
-          sortOptions = { price: 1 };
-          break;
-        case 'price_desc':
-          sortOptions = { price: -1 };
-          break;
-        case 'newest':
-          sortOptions = { _id: -1 };
-          break;
-        case 'oldest':
-          sortOptions = { _id: 1 };
-          break;
-        default:
-          sortOptions = { _id: -1 };
-      }
-  
-      const suggestions = await getSuggestionsProducts(filterConditions, page, limit, sortOptions);
-      const totalCount = await getTotalCount(filterConditions);
-      const categoriesWithCounts = await getDistinctProductsCategoriesWithCounts(filterConditions);
-      const colorsWithCounts = await getDistinctColorsWithCounts(filterConditions);
-  
-      return res.status(200).json({
-        suggestions,
-        totalCount,
-        totalPages: Math.ceil(totalCount / limit),
-        currentPage: page,
-        categoriesWithCounts,
-        colorsWithCounts
-      });
-    } catch (error) {
-      console.error("Error fetching suggestions", error);
-      return res.status(500).json({ message: 'Internal server error' });
-    }
-  };
+  try {
+    const query = req.query.query;
+    console.log('Received filters:', {
+      color: req.query.color,
+      category: req.query.category,
+      gender: req.query.gender,
+      sort: req.query.sort
+    });
 
+    const filters = {
+      color: req.query.color ? req.query.color.split(',') : null,
+      category: req.query.category ? req.query.category.split(',') : null,
+      gender: req.query.gender ? req.query.gender.split(',') : null,
+      sort: req.query.sort
+    };
+
+    const filterConditions = { name: { $regex: query || '', $options: 'i' } };
+    if (filters.color) {
+      filterConditions.color = { $in: filters.color.map(c => new RegExp(c, 'i')) };
+    }
+    if (filters.category) {
+      filterConditions.category = { $in: filters.category.map(c => new RegExp(c, 'i')) };
+    }
+    if (filters.gender) {
+      filterConditions.gender = { $in: filters.gender.map(g => new RegExp(`^${g}$`, 'i')) };
+    }
+
+    const page = parseInt(req.query.page, 10) || 1;
+    const limit = parseInt(req.query.limit, 10) || 10;
+
+    let sortOptions = {};
+    switch (filters.sort) {
+      case 'price_asc': sortOptions = { price: 1 }; break;
+      case 'price_desc': sortOptions = { price: -1 }; break;
+      case 'newest': sortOptions = { _id: -1 }; break;
+      case 'oldest': sortOptions = { _id: 1 }; break;
+      default: sortOptions = { _id: -1 };
+    }
+
+    const suggestions = await getSuggestionsProducts(filterConditions, page, limit, sortOptions).catch(err => {
+      console.error('Error fetching suggestions:', err);
+      return [];
+    });
+    const totalCount = await getTotalCount(filterConditions).catch(err => {
+      console.error('Error fetching total count:', err);
+      return 0;
+    });
+    const categoriesWithCounts = await getDistinctProductsCategoriesWithCounts(filterConditions).catch(err => {
+      console.error('Error fetching categories with counts:', err);
+      return [];
+    });
+    const colorsWithCounts = await getDistinctColorsWithCounts(filterConditions).catch(err => {
+      console.error('Error fetching colors with counts:', err);
+      return [];
+    });
+
+    return res.status(200).json({
+      suggestions,
+      totalCount,
+      totalPages: Math.ceil(totalCount / limit),
+      currentPage: page,
+      categoriesWithCounts,
+      colorsWithCounts
+    });
+  } catch (error) {
+    console.error("Unexpected error in getSuggestionsProducts:", error);
+    return res.status(500).json({ message: 'Internal server error' });
+  }
+};
 exports.getDistinctCategoriesWithCounts = async (req, res, next) => {
     try {
         const gender = req.query.gender || 'all'; // Default to 'all' if not provided
