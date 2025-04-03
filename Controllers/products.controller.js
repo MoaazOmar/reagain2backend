@@ -56,41 +56,38 @@ exports.getSingleProduct = async (req, res, next) => {
 
 exports.getProductsAndCarouselProducts = async (req, res, next) => {
   try {
-    const {
-      gender,
-      category,
-      page = 1,
-      limit = 4,
-      sort,
-      search,
-      color
-    } = req.query;
+    const { gender, category, page = 1, limit = 4, sort, search, color } = req.query;
     const skip = (page - 1) * limit;
 
     let products = [];
-
-    // Carousel products displaying 
     if (gender && gender !== 'all') {
       try {
         const mostLiked = await getMostLikedProducts(gender, 1);
         const mostCommented = await getMostCommentedProducts(gender, 1);
         const newest = await getNewestProducts(gender, 1);
         const random = await getRandomProduct(gender);
-        products = [...mostLiked, ...mostCommented, ...newest, random];
+        products = [...mostLiked, ...mostCommented, ...newest, random].filter(Boolean);
+        if (products.length < 4) {
+          console.log(`Falling back to newest for ${gender}`);
+          const additional = await getNewestProducts(gender, 4 - products.length);
+          products = [...products, ...additional].slice(0, 4);
+        }
       } catch (error) {
         console.error(`Error fetching carousel products for ${gender}:`, error);
-        products = [];
+        products = await getNewestProducts(gender, 4).catch(err => {
+          console.error('Fallback failed:', err);
+          return [];
+        });
       }
     } else {
       try {
         products = await getAllProductsMixed();
       } catch (error) {
         console.error('Error fetching mixed products:', error);
-        products = [];
+        products = await getNewestProducts('all', 4).catch(err => []);
       }
     }
 
-    // Fetch Most Liked and Most Recent Products
     let mostLikedProducts, mostRecentProducts;
     try {
       mostLikedProducts = await getMostLikedProducts(gender || 'all', 4);
@@ -101,17 +98,10 @@ exports.getProductsAndCarouselProducts = async (req, res, next) => {
       mostRecentProducts = [];
     }
 
-    // Main products logic with pagination
     let query = {};
-    if (gender && gender !== 'all') {
-      query.gender = gender;
-    }
-    if (color) {
-      query.color = { $regex: new RegExp(`^${color.trim()}$`, 'i') };
-    }
-    if (category) {
-      query.category = { $regex: new RegExp(`^${category.trim()}$`, 'i') };
-    }
+    if (gender && gender !== 'all') query.gender = gender;
+    if (color) query.color = { $regex: new RegExp(`^${color.trim()}$`, 'i') };
+    if (category) query.category = { $regex: new RegExp(`^${category.trim()}$`, 'i') };
     if (search) {
       query.$or = [
         { name: { $regex: search, $options: 'i' } },
@@ -120,20 +110,11 @@ exports.getProductsAndCarouselProducts = async (req, res, next) => {
     }
     let sortOptions = {};
     switch (sort) {
-      case 'newest':
-        sortOptions = { _id: -1 };
-        break;
-      case 'price_asc':
-        sortOptions = { price: 1 };
-        break;
-      case 'price_desc':
-        sortOptions = { price: -1 };
-        break;
-      case 'oldest':
-        sortOptions = { _id: 1 };
-        break;
-      default:
-        sortOptions = { _id: 1 };
+      case 'newest': sortOptions = { _id: -1 }; break;
+      case 'price_asc': sortOptions = { price: 1 }; break;
+      case 'price_desc': sortOptions = { price: -1 }; break;
+      case 'oldest': sortOptions = { _id: 1 }; break;
+      default: sortOptions = { _id: 1 };
     }
 
     let mainProducts, total;
@@ -171,9 +152,7 @@ exports.getProductsAndCarouselProducts = async (req, res, next) => {
     });
   } catch (error) {
     console.error('Error fetching carousel products:', error);
-    return res.status(500).json({
-      message: 'Internal server error'
-    });
+    return res.status(500).json({ message: 'Internal server error' });
   }
 };
 exports.getSuggestionsProducts = async (req, res, next) => {
