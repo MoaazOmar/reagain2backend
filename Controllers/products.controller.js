@@ -158,7 +158,9 @@ exports.getProductsAndCarouselProducts = async (req, res, next) => {
       categoriesWithCounts,
       colorsWithCounts,
       user: req.session.user || null,
-      isAdmin: req.session.user?.isAdmin || false
+      isAdmin: req.session.user?.isAdmin || false,
+      winterCollection,
+      summerCollection
     });
   } catch (error) {
     console.error('Error fetching carousel products:', error);
