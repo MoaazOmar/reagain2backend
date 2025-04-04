@@ -57,51 +57,144 @@ exports.getSingleProduct = async (req, res, next) => {
 
 exports.getFeaturedCollections = async (req, res, next) => {
   try {
-    const { gender = 'all' } = req.query;
+    const { gender = 'all' } = req.query; // Default to 'all' if no gender provided
+    const normalizedGender = gender.toLowerCase(); // Normalize to lowercase
+    console.log('Backend Received Gender:', normalizedGender);
 
     let carouselProducts = [];
-    if (gender !== 'all') {
+    if (normalizedGender !== 'all') {
       try {
-        const [mostLiked, mostCommented, newest, random] = await Promise.all([
-          getMostLikedProducts(gender, 1),
-          getMostCommentedProducts(gender, 1),
-          getNewestProducts(gender, 1),
-          getRandomProduct(gender)
+        // Most liked product (1)
+        const mostLiked = await Product.find({ gender: { $regex: new RegExp(`^${normalizedGender}$`, 'i') } })
+          .sort({ likes: -1 })
+          .limit(1);
+
+        // Most commented product (1)
+        const mostCommented = await Product.aggregate([
+          { $match: { gender: { $regex: new RegExp(`^${normalizedGender}$`, 'i') } } },
+          { $project: { commentCount: { $size: "$comments" }, doc: "$$ROOT" } },
+          { $sort: { commentCount: -1 } },
+          { $limit: 1 },
+          { $replaceRoot: { newRoot: "$doc" } }
         ]);
-        
-        carouselProducts = [...mostLiked, ...mostCommented, ...newest, random].filter(Boolean);
+
+        // Newest product (1)
+        const newest = await Product.find({ gender: { $regex: new RegExp(`^${normalizedGender}$`, 'i') } })
+          .sort({ createdAt: -1 })
+          .limit(1);
+
+        // Random product (1)
+        const count = await Product.countDocuments({ gender: { $regex: new RegExp(`^${normalizedGender}$`, 'i') } });
+        const randomIndex = Math.floor(Math.random() * count);
+        const random = await Product.find({ gender: { $regex: new RegExp(`^${normalizedGender}$`, 'i') } })
+          .skip(randomIndex)
+          .limit(1);
+
+        carouselProducts = [...mostLiked, ...mostCommented, ...newest, ...(random || [])].filter(Boolean);
+        console.log(`Carousel for ${normalizedGender}:`, carouselProducts);
+
+        // Fill up to 4 if needed
         if (carouselProducts.length < 4) {
-          const additional = await getNewestProducts(gender, 4 - carouselProducts.length);
-          carouselProducts = [...products, ...additional].slice(0, 4);
+          const additional = await Product.find({ gender: { $regex: new RegExp(`^${normalizedGender}$`, 'i') } })
+            .sort({ createdAt: -1 })
+            .limit(4 - carouselProducts.length);
+          carouselProducts = [...carouselProducts, ...additional].slice(0, 4);
         }
       } catch (error) {
-        console.error(`Error fetching carousel products for ${gender}:`, error);
-        carouselProducts = await getNewestProducts(gender, 4).catch(err => {
-          console.error('Fallback failed:', err);
-          return [];
-        });
+        console.error(`Error fetching carousel for ${normalizedGender}:`, error);
+        carouselProducts = await Product.find({ gender: { $regex: new RegExp(`^${normalizedGender}$`, 'i') } })
+          .sort({ createdAt: -1 })
+          .limit(4) || [];
       }
     } else {
       try {
-        carouselProducts = await getAllProductsMixed();
+        // Mixed products for 'all'
+        const mostLiked = await Product.find({})
+          .sort({ likes: -1 })
+          .limit(1);
+        const mostCommented = await Product.aggregate([
+          { $match: {} },
+          { $project: { commentCount: { $size: "$comments" }, doc: "$$ROOT" } },
+          { $sort: { commentCount: -1 } },
+          { $limit: 1 },
+          { $replaceRoot: { newRoot: "$doc" } }
+        ]);
+        const newest = await Product.find({})
+          .sort({ createdAt: -1 })
+          .limit(1);
+        const count = await Product.countDocuments({});
+        const randomIndex = Math.floor(Math.random() * count);
+        const random = await Product.find({})
+          .skip(randomIndex)
+          .limit(1);
+
+        carouselProducts = [...mostLiked, ...mostCommented, ...newest, ...(random || [])].filter(Boolean);
+        console.log('Mixed carousel products:', carouselProducts);
       } catch (error) {
-        console.error('Error fetching mixed products:', error);
-        carouselProducts = await getNewestProducts('all', 4).catch(err => []);
+        console.error('Error fetching mixed carousel products:', error);
+        carouselProducts = await Product.find({})
+          .sort({ createdAt: -1 })
+          .limit(4) || [];
       }
     }
 
-    // Fetch other featured collections concurrently
-    const [
-      mostLikedProducts,
-      mostRecentProducts,
-      winterCollection,
-      summerCollection
-    ] = await Promise.all([
-      getMostLikedProducts(gender, 4).catch(() => []),
-      getNewestProducts(gender, 4).catch(() => []),
-      getWinterProductsData(gender).catch(() => []),
-      getSummerAndSpringProductsData(gender).catch(() => [])
-    ]);
+    // Most Liked Products (4)
+    let mostLikedProducts = [];
+    try {
+      mostLikedProducts = await Product.find(
+        normalizedGender !== 'all' ? { gender: { $regex: new RegExp(`^${normalizedGender}$`, 'i') } } : {}
+      )
+        .sort({ likes: -1 })
+        .limit(4);
+      console.log(`mostLikedProducts for ${normalizedGender}:`, mostLikedProducts);
+    } catch (error) {
+      console.error(`Error fetching mostLikedProducts for ${normalizedGender}:`, error);
+      mostLikedProducts = [];
+    }
+
+    // Most Recent Products (4)
+    let mostRecentProducts = [];
+    try {
+      mostRecentProducts = await Product.find(
+        normalizedGender !== 'all' ? { gender: { $regex: new RegExp(`^${normalizedGender}$`, 'i') } } : {}
+      )
+        .sort({ createdAt: -1 })
+        .limit(4);
+      console.log(`mostRecentProducts for ${normalizedGender}:`, mostRecentProducts);
+    } catch (error) {
+      console.error(`Error fetching mostRecentProducts for ${normalizedGender}:`, error);
+      mostRecentProducts = [];
+    }
+
+    // Winter Collection (4)
+    let winterCollection = [];
+    try {
+      winterCollection = await Product.find(
+        normalizedGender !== 'all'
+          ? { gender: { $regex: new RegExp(`^${normalizedGender}$`, 'i') }, season: 'winter' }
+          : { season: 'winter' }
+      )
+        .limit(10);
+      console.log(`winterCollection for ${normalizedGender}:`, winterCollection);
+    } catch (error) {
+      console.error(`Error fetching winterCollection for ${normalizedGender}:`, error);
+      winterCollection = [];
+    }
+
+    // Summer Collection (4)
+    let summerCollection = [];
+    try {
+      summerCollection = await Product.find(
+        normalizedGender !== 'all'
+          ? { gender: { $regex: new RegExp(`^${normalizedGender}$`, 'i') }, season: { $in: ['summer', 'spring'] } }
+          : { season: { $in: ['summer', 'spring'] } }
+      )
+        .limit(10);
+      console.log(`summerCollection for ${normalizedGender}:`, summerCollection);
+    } catch (error) {
+      console.error(`Error fetching summerCollection for ${normalizedGender}:`, error);
+      summerCollection = [];
+    }
 
     res.status(200).json({
       mostLikedProducts,
@@ -111,10 +204,11 @@ exports.getFeaturedCollections = async (req, res, next) => {
       summerCollection
     });
   } catch (error) {
-    console.error('Error fetching featured collections:', error);
+    console.error('Error in getFeaturedCollections:', error);
     res.status(500).json({ message: 'Internal server error' });
   }
 };
+
 
 // Second endpoint for main products (remains unchanged)
 exports.getMainProducts = async (req, res, next) => {
