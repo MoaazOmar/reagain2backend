@@ -7,7 +7,8 @@ const productController = require('../Controllers/products.controller');
 router.get('/', productController.getAllProducts);
 
 // Existing routes
-router.get('/products/carousel', productController.getProductsAndCarouselProducts);
+router.get('/featured', productController.getFeaturedCollections);
+router.get('/main', productController.getMainProducts);
 router.get('/categories', productController.getDistinctCategoriesWithCounts);
 router.get('/search', productController.getSuggestionsProducts);
 

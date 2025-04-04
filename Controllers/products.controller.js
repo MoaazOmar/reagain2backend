@@ -55,52 +55,83 @@ exports.getSingleProduct = async (req, res, next) => {
     }
 };
 
-exports.getProductsAndCarouselProducts = async (req, res, next) => {
+exports.getFeaturedCollections = async (req, res, next) => {
   try {
-    const { gender, category, page = 1, limit = 4, sort, search, color } = req.query;
-    const skip = (page - 1) * limit;
+    const { gender = 'all' } = req.query;
 
-    let products = [];
-    if (gender && gender !== 'all') {
+    let carouselProducts = [];
+    if (gender !== 'all') {
       try {
-        const mostLiked = await getMostLikedProducts(gender, 1);
-        const mostCommented = await getMostCommentedProducts(gender, 1);
-        const newest = await getNewestProducts(gender, 1);
-        const random = await getRandomProduct(gender);
-        products = [...mostLiked, ...mostCommented, ...newest, random].filter(Boolean);
-        if (products.length < 4) {
-          console.log(`Falling back to newest for ${gender}`);
-          const additional = await getNewestProducts(gender, 4 - products.length);
-          products = [...products, ...additional].slice(0, 4);
+        const [mostLiked, mostCommented, newest, random] = await Promise.all([
+          getMostLikedProducts(gender, 1),
+          getMostCommentedProducts(gender, 1),
+          getNewestProducts(gender, 1),
+          getRandomProduct(gender)
+        ]);
+        
+        carouselProducts = [...mostLiked, ...mostCommented, ...newest, random].filter(Boolean);
+        if (carouselProducts.length < 4) {
+          const additional = await getNewestProducts(gender, 4 - carouselProducts.length);
+          carouselProducts = [...products, ...additional].slice(0, 4);
         }
       } catch (error) {
         console.error(`Error fetching carousel products for ${gender}:`, error);
-        products = await getNewestProducts(gender, 4).catch(err => {
+        carouselProducts = await getNewestProducts(gender, 4).catch(err => {
           console.error('Fallback failed:', err);
           return [];
         });
       }
     } else {
       try {
-        products = await getAllProductsMixed();
+        carouselProducts = await getAllProductsMixed();
       } catch (error) {
         console.error('Error fetching mixed products:', error);
-        products = await getNewestProducts('all', 4).catch(err => []);
+        carouselProducts = await getNewestProducts('all', 4).catch(err => []);
       }
     }
 
-    let mostLikedProducts, mostRecentProducts;
-    try {
-      mostLikedProducts = await getMostLikedProducts(gender || 'all', 4);
-      mostRecentProducts = await getNewestProducts(gender || 'all', 4);
-    } catch (error) {
-      console.error('Error fetching most liked/recent products:', error);
-      mostLikedProducts = [];
-      mostRecentProducts = [];
-    }
+    // Fetch other featured collections concurrently
+    const [
+      mostLikedProducts,
+      mostRecentProducts,
+      winterCollection,
+      summerCollection
+    ] = await Promise.all([
+      getMostLikedProducts(gender, 4).catch(() => []),
+      getNewestProducts(gender, 4).catch(() => []),
+      getWinterProductsData(gender).catch(() => []),
+      getSummerAndSpringProductsData(gender).catch(() => [])
+    ]);
+
+    res.status(200).json({
+      mostLikedProducts,
+      mostRecentProducts,
+      carouselProducts,
+      winterCollection,
+      summerCollection
+    });
+  } catch (error) {
+    console.error('Error fetching featured collections:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+// Second endpoint for main products (remains unchanged)
+exports.getMainProducts = async (req, res, next) => {
+  try {
+    const { 
+      gender = 'all', 
+      category, 
+      page = 1, 
+      limit = 4, 
+      sort, 
+      search, 
+      color 
+    } = req.query;
+    const skip = (page - 1) * limit;
 
     let query = {};
-    if (gender && gender !== 'all') query.gender = gender;
+    if (gender !== 'all') query.gender = gender;
     if (color) query.color = { $regex: new RegExp(`^${color.trim()}$`, 'i') };
     if (category) query.category = { $regex: new RegExp(`^${category.trim()}$`, 'i') };
     if (search) {
@@ -109,64 +140,34 @@ exports.getProductsAndCarouselProducts = async (req, res, next) => {
         { description: { $regex: search, $options: 'i' } }
       ];
     }
-    let sortOptions = {};
-    switch (sort) {
-      case 'newest': sortOptions = { _id: -1 }; break;
-      case 'price_asc': sortOptions = { price: 1 }; break;
-      case 'price_desc': sortOptions = { price: -1 }; break;
-      case 'oldest': sortOptions = { _id: 1 }; break;
-      default: sortOptions = { _id: 1 };
-    }
 
-    let mainProducts, total;
-    try {
-      const result = await getMainProducts(query, sortOptions, skip, limit);
-      mainProducts = result.mainProducts;
-      total = result.total;
-    } catch (error) {
-      console.error('Error fetching main products:', error);
-      mainProducts = [];
-      total = 0;
-    }
+    const sortOptions = {
+      'newest': { _id: -1 },
+      'price_asc': { price: 1 },
+      'price_desc': { price: -1 },
+      'oldest': { _id: 1 }
+    }[sort] || { _id: 1 };
 
-    let categoriesWithCounts, colorsWithCounts;
-    try {
-      categoriesWithCounts = await getDistinctProductsCategoriesWithCounts(query);
-      colorsWithCounts = await getDistinctColorsWithCounts(query);
-    } catch (error) {
-      console.error('Error fetching categories/colors:', error);
-      categoriesWithCounts = [];
-      colorsWithCounts = [];
-    }
-    let winterCollection , summerCollection; 
-    try{
-      winterCollection =await getWinterProductsData(gender || 'all')
-      summerCollection = await getSummerAndSpringProductsData(gender || 'all')
-    }
-    catch(error){
-      console.error('Error fetching winterCollection , summerCollection:', error);
-      winterCollection = [];
-      summerCollection = [];
-    }
+    const [result, categoriesWithCounts, colorsWithCounts] = await Promise.all([
+      getMainProducts(query, sortOptions, skip, limit),
+      getDistinctProductsCategoriesWithCounts(query),
+      getDistinctColorsWithCounts(query)
+    ]);
+
     res.status(200).json({
-      mostLikedProducts,
-      mostRecentProducts,
-      carouselProducts: products,
-      products: mainProducts,
-      totalPages: Math.ceil(total / limit),
+      products: result.mainProducts,
+      totalPages: Math.ceil(result.total / limit),
       currentPage: Number(page),
       categoriesWithCounts,
-      colorsWithCounts,
-      user: req.session.user || null,
-      isAdmin: req.session.user?.isAdmin || false,
-      winterCollection:winterCollection,
-      summerCollection:summerCollection,
+      colorsWithCounts
     });
   } catch (error) {
-    console.error('Error fetching carousel products:', error);
-    return res.status(500).json({ message: 'Internal server error' });
+    console.error('Error fetching main products:', error);
+    res.status(500).json({ message: 'Internal server error' });
   }
 };
+
+
 exports.getSuggestionsProducts = async (req, res, next) => {
   try {
     const query = req.query.query;
