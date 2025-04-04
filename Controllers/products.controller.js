@@ -222,75 +222,104 @@ exports.fetchMainProducts = async (req, res, next) => {
 };
 exports.getSuggestionsProducts = async (req, res, next) => {
   try {
-    const query = req.query.query;
-    console.log('Received filters:', {
-      color: req.query.color,
-      category: req.query.category,
-      gender: req.query.gender,
-      sort: req.query.sort
-    });
+      const query = req.query.query; // Search term from query parameter
+      // Log received filters for debugging
+      console.log('Received filters:', {
+          color: req.query.color,
+          category: req.query.category,
+          gender: req.query.gender,
+          sort: req.query.sort
+      });
 
-    const filters = {
-      color: req.query.color ? req.query.color.split(',') : null,
-      category: req.query.category ? req.query.category.split(',') : null,
-      gender: req.query.gender ? req.query.gender.split(',') : null,
-      sort: req.query.sort
-    };
+      let filters;
+      try {
+          // Parse filters from query parameters, splitting comma-separated values
+          filters = {
+              color: req.query.color ? req.query.color.split(',') : null,     // e.g., "black,red" -> ["black", "red"]
+              category: req.query.category ? req.query.category.split(',') : null, // e.g., "jacket,tops"
+              gender: req.query.gender ? req.query.gender.split(',') : null,  // e.g., "Male,Female"
+              sort: req.query.sort                                           // e.g., "newest"
+          };
+      } catch (error) {
+          console.error("Error parsing filters:", error);
+          return res.status(400).json({ message: 'Invalid filter parameters' });
+      }
 
-    const filterConditions = { name: { $regex: query || '', $options: 'i' } };
-    if (filters.color) {
-      filterConditions.color = { $in: filters.color.map(c => new RegExp(c, 'i')) };
-    }
-    if (filters.category) {
-      filterConditions.category = { $in: filters.category.map(c => new RegExp(c, 'i')) };
-    }
-    if (filters.gender) {
-      filterConditions.gender = { $in: filters.gender.map(g => new RegExp(`^${g}$`, 'i')) };
-    }
+      let filterConditions;
+      try {
+          // Build filter conditions for MongoDB query
+          filterConditions = { 
+              name: { $regex: query || '', $options: 'i' } // Search name, default to empty string if no query
+          };
+          if (filters.color) {
+              // Filter by colors array, case-insensitive regex for each color
+              filterConditions.colors = { $in: filters.color.map(c => new RegExp(c, 'i')) };
+          }
+          if (filters.category) {
+              // Filter by category, case-insensitive regex for each category
+              filterConditions.category = { $in: filters.category.map(c => new RegExp(c, 'i')) };
+          }
+          if (filters.gender) {
+              // Filter by gender, exact match with case-insensitive regex
+              filterConditions.gender = { $in: filters.gender.map(g => new RegExp(`^${g}$`, 'i')) };
+          }
+      } catch (error) {
+          console.error("Error building filter conditions:", error);
+          return res.status(400).json({ message: 'Invalid filter conditions' });
+      }
 
-    const page = parseInt(req.query.page, 10) || 1;
-    const limit = parseInt(req.query.limit, 10) || 10;
+      let page, limit;
+      try {
+          // Parse pagination parameters with defaults
+          page = parseInt(req.query.page, 10) || 1;   // Current page, default 1
+          limit = parseInt(req.query.limit, 10) || 10; // Items per page, default 10
+      } catch (error) {
+          console.error("Error parsing pagination parameters:", error);
+          return res.status(400).json({ message: 'Invalid pagination parameters' });
+      }
 
-    let sortOptions = {};
-    switch (filters.sort) {
-      case 'price_asc': sortOptions = { price: 1 }; break;
-      case 'price_desc': sortOptions = { price: -1 }; break;
-      case 'newest': sortOptions = { _id: -1 }; break;
-      case 'oldest': sortOptions = { _id: 1 }; break;
-      default: sortOptions = { _id: -1 };
-    }
+      let sortOptions;
+      try {
+          // Define sorting options based on filter parameter
+          sortOptions = {};
+          switch (filters.sort) {
+              case 'price_asc': sortOptions = { price: 1 }; break;   // Sort by price ascending
+              case 'price_desc': sortOptions = { price: -1 }; break; // Sort by price descending
+              case 'newest': sortOptions = { _id: -1 }; break;       // Sort by newest first
+              case 'oldest': sortOptions = { _id: 1 }; break;        // Sort by oldest first
+              default: sortOptions = { _id: -1 };                    // Default to newest first
+          }
+      } catch (error) {
+          console.error("Error setting sort options:", error);
+          return res.status(400).json({ message: 'Invalid sort parameter' });
+      }
 
-    const suggestions = await getSuggestionsProducts(filterConditions, page, limit, sortOptions).catch(err => {
-      console.error('Error fetching suggestions:', err);
-      return [];
-    });
-    const totalCount = await getTotalCount(filterConditions).catch(err => {
-      console.error('Error fetching total count:', err);
-      return 0;
-    });
-    const categoriesWithCounts = await getDistinctProductsCategoriesWithCounts(filterConditions).catch(err => {
-      console.error('Error fetching categories with counts:', err);
-      return [];
-    });
-    const colorsWithCounts = await getDistinctColorsWithCounts(filterConditions).catch(err => {
-      console.error('Error fetching colors with counts:', err);
-      return [];
-    });
+      let suggestions, totalCount, categoriesWithCounts, colorsWithCounts;
+      try {
+          // Fetch suggestions, total count, and category/color counts
+          suggestions = await getSuggestionsProducts(filterConditions, page, limit, sortOptions); // Suggested products
+          totalCount = await getTotalCount(filterConditions); // Total matching products
+          categoriesWithCounts = await getDistinctProductsCategoriesWithCounts(filterConditions); // Category counts
+          colorsWithCounts = await getDistinctColorsWithCounts(filterConditions); // Color counts
+      } catch (error) {
+          console.error("Error fetching data from database:", error);
+          return res.status(500).json({ message: 'Database error' });
+      }
 
-    return res.status(200).json({
-      suggestions,
-      totalCount,
-      totalPages: Math.ceil(totalCount / limit),
-      currentPage: page,
-      categoriesWithCounts,
-      colorsWithCounts
-    });
+      // Send response with suggestions and metadata
+      return res.status(200).json({
+          suggestions,           // Array of suggested products
+          totalCount,            // Total number of matching products
+          totalPages: Math.ceil(totalCount / limit), // Total pages
+          currentPage: page,     // Current page number
+          categoriesWithCounts,  // Array of categories with counts
+          colorsWithCounts       // Array of colors with counts
+      });
   } catch (error) {
-    console.error("Unexpected error in getSuggestionsProducts:", error);
-    return res.status(500).json({ message: 'Internal server error' });
+      console.error("Error fetching suggestions", error);
+      return res.status(500).json({ message: 'Internal server error' });
   }
 };
-
 exports.getDistinctCategoriesWithCounts = async (req, res, next) => {
   try {
     const gender = req.query.gender || 'all';
