@@ -150,10 +150,11 @@ exports.getMainProducts = async (req, res, next) => {
       search, 
       color 
     } = req.query;
+    const normalizedGender = gender.toLowerCase(); // Normalize to lowercase
     const skip = (page - 1) * limit;
 
     let query = {};
-    if (gender !== 'all') query.gender = gender;
+    if (normalizedGender !== 'all') query.gender = normalizedGender; // Use normalized gender
     if (color) query.color = { $regex: new RegExp(`^${color.trim()}$`, 'i') };
     if (category) query.category = { $regex: new RegExp(`^${category.trim()}$`, 'i') };
     if (search) {
@@ -188,6 +189,7 @@ exports.getMainProducts = async (req, res, next) => {
     res.status(500).json({ message: 'Internal server error' });
   }
 };
+
 
 exports.getSuggestionsProducts = async (req, res, next) => {
   try {
