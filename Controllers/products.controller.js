@@ -139,7 +139,7 @@ exports.getFeaturedCollections = async (req, res, next) => {
   }
 };
 
-exports.getMainProducts = async (req, res, next) => {
+exports.fetchMainProducts = async (req, res, next) => {
   try {
     const { 
       gender = 'all', 
@@ -150,11 +150,11 @@ exports.getMainProducts = async (req, res, next) => {
       search, 
       color 
     } = req.query;
-    const normalizedGender = gender.toLowerCase(); // Normalize to lowercase
+    const normalizedGender = gender;
     const skip = (page - 1) * limit;
 
     let query = {};
-    if (normalizedGender !== 'all') query.gender = normalizedGender; // Use normalized gender
+    if (normalizedGender !== 'all') query.gender = normalizedGender;
     if (color) query.color = { $regex: new RegExp(`^${color.trim()}$`, 'i') };
     if (category) query.category = { $regex: new RegExp(`^${category.trim()}$`, 'i') };
     if (search) {
@@ -172,7 +172,7 @@ exports.getMainProducts = async (req, res, next) => {
     }[sort] || { _id: 1 };
 
     const [result, categoriesWithCounts, colorsWithCounts] = await Promise.all([
-      getMainProducts(query, sortOptions, skip, limit),
+      getMainProductsModel(query, sortOptions, skip, limit), // Use model function
       getDistinctProductsCategoriesWithCounts(query),
       getDistinctColorsWithCounts(query)
     ]);
@@ -189,6 +189,7 @@ exports.getMainProducts = async (req, res, next) => {
     res.status(500).json({ message: 'Internal server error' });
   }
 };
+
 
 
 exports.getSuggestionsProducts = async (req, res, next) => {

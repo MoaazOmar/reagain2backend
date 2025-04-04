@@ -8,7 +8,7 @@ router.get('/', productController.getAllProducts);
 
 // Existing routes
 router.get('/featured', productController.getFeaturedCollections);
-router.get('/main', productController.getMainProducts);
+router.get('/main', productController.fetchMainProducts);
 router.get('/categories', productController.getDistinctCategoriesWithCounts);
 router.get('/search', productController.getSuggestionsProducts);
 
