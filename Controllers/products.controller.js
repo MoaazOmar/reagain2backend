@@ -1,77 +1,74 @@
-const { Product, getAllProducts, getProductByID , getMostLikedProducts,getMostCommentedProducts,getNewestProducts,getRandomProduct,getAllProductsMixed 
-,getMainProducts , getDistinctProductsCategoriesWithCounts , getDistinctColorsWithCounts ,  getSuggestionsProducts , getTotalCount , getRelatedProducts , toggleLikeProduct,
-toggleDislikeProduct , getWinterProductsData,
-        getSummerAndSpringProductsData} = require('../Models/products.model');
+const { Product, getAllProducts, getProductByID, getMostLikedProducts, getMostCommentedProducts, getNewestProducts, 
+  getRandomProduct, getAllProductsMixed, getMainProducts, getDistinctProductsCategoriesWithCounts, 
+  getDistinctColorsWithCounts, getSuggestionsProducts, getTotalCount, getRelatedProducts, 
+  toggleLikeProduct, toggleDislikeProduct, getWinterProductsData, getSummerAndSpringProductsData 
+} = require('../Models/products.model');
 
 exports.createProduct = async (req, res, next) => {
-    try {
-        req.body.image = req.file.filename;
-        const { name, color, price, description, category, gender,season } = req.body;
-        const newProduct = new Product({
-            name,
-            color,
-            price,
-            description,
-            category,
-            gender,
-            season,
-            image: req.body.image
-        });
-        await newProduct.save();
-        res.status(201).json({ message: 'Product created successfully', product: newProduct });
-    } catch (error) {
-        console.error('Error Creating Product', error);
-        res.status(500).json({ message: 'Internal server error' });
-    }
+  try {
+    req.body.image = req.file.filename;
+    const { name, color, price, description, category, gender, season } = req.body;
+    const newProduct = new Product({
+      name,
+      color,
+      price,
+      description,
+      category,
+      gender,
+      season,
+      image: req.body.image
+    });
+    await newProduct.save();
+    res.status(201).json({ message: 'Product created successfully', product: newProduct });
+  } catch (error) {
+    console.error('Error Creating Product', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
 };
 
 exports.getAllProducts = async (req, res, next) => {
-    try {
-        const products = await getAllProducts();
-        res.status(200).json(products);
-    } catch (error) {
-        console.error('Error fetching products', error);
-        res.status(500).json({ message: 'Internal server error' });
-    }
+  try {
+    const products = await getAllProducts();
+    res.status(200).json(products);
+  } catch (error) {
+    console.error('Error fetching products', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
 };
 
 exports.getSingleProduct = async (req, res, next) => {
-    try {
-        const id = req.params.id;
-        const product = await getProductByID(id);
+  try {
+    const id = req.params.id;
+    const product = await getProductByID(id);
 
-        if (!product) {
-            return res.status(404).json({ message: 'Product not found' });
-        }
-
-        res.status(200).json({
-            product,
-            user: req.session.user || null,
-            isAdmin: req.session.user?.isAdmin || false
-        });
-    } catch (error) {
-        console.error('Error fetching the product', error);
-        res.status(500).json({ message: 'Internal server error' });
+    if (!product) {
+      return res.status(404).json({ message: 'Product not found' });
     }
-};
 
-const { Product, getAllProducts, getProductByID, getMostLikedProducts, getMostCommentedProducts, getNewestProducts, getRandomProduct, getAllProductsMixed, 
-  getMainProducts, getDistinctProductsCategoriesWithCounts, getDistinctColorsWithCounts, getSuggestionsProducts, getTotalCount, getRelatedProducts, 
-  toggleLikeProduct, toggleDislikeProduct, getWinterProductsData, getSummerAndSpringProductsData } = require('../Models/products.model');
+    res.status(200).json({
+      product,
+      user: req.session.user || null,
+      isAdmin: req.session.user?.isAdmin || false
+    });
+  } catch (error) {
+    console.error('Error fetching the product', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
 
 exports.getFeaturedCollections = async (req, res, next) => {
   try {
-    const { gender = 'all' } = req.query; // Default to 'all' if no gender
-    const normalizedGender = gender.toLowerCase(); // Normalize to lowercase
+    const { gender = 'all' } = req.query;
+    const normalizedGender = gender.toLowerCase();
     console.log('Backend Received Gender:', normalizedGender);
 
     let carouselProducts = [];
     if (normalizedGender !== 'all') {
       try {
-        const mostLiked = await getMostLikedProducts(normalizedGender, 1);      // 1 most liked
-        const mostCommented = await getMostCommentedProducts(normalizedGender, 1); // 1 most commented
-        const newest = await getNewestProducts(normalizedGender, 1);            // 1 newest
-        const random = await getRandomProduct(normalizedGender);                // 1 random
+        const mostLiked = await getMostLikedProducts(normalizedGender, 1);
+        const mostCommented = await getMostCommentedProducts(normalizedGender, 1);
+        const newest = await getNewestProducts(normalizedGender, 1);
+        const random = await getRandomProduct(normalizedGender);
         carouselProducts = [...mostLiked, ...mostCommented, ...newest, random].filter(Boolean);
         console.log(`Carousel for ${normalizedGender}:`, carouselProducts);
 
@@ -85,7 +82,7 @@ exports.getFeaturedCollections = async (req, res, next) => {
       }
     } else {
       try {
-        carouselProducts = await getAllProductsMixed(); // Mixed products for 'all'
+        carouselProducts = await getAllProductsMixed();
         console.log('Mixed carousel products:', carouselProducts);
       } catch (error) {
         console.error('Error fetching mixed carousel products:', error);
@@ -93,7 +90,6 @@ exports.getFeaturedCollections = async (req, res, next) => {
       }
     }
 
-    // Most Liked Products
     let mostLikedProducts = [];
     try {
       mostLikedProducts = await getMostLikedProducts(normalizedGender, 4);
@@ -103,7 +99,6 @@ exports.getFeaturedCollections = async (req, res, next) => {
       mostLikedProducts = [];
     }
 
-    // Most Recent Products
     let mostRecentProducts = [];
     try {
       mostRecentProducts = await getNewestProducts(normalizedGender, 4);
@@ -113,7 +108,6 @@ exports.getFeaturedCollections = async (req, res, next) => {
       mostRecentProducts = [];
     }
 
-    // Winter Collection
     let winterCollection = [];
     try {
       winterCollection = await getWinterProductsData(normalizedGender);
@@ -123,7 +117,6 @@ exports.getFeaturedCollections = async (req, res, next) => {
       winterCollection = [];
     }
 
-    // Summer Collection
     let summerCollection = [];
     try {
       summerCollection = await getSummerAndSpringProductsData(normalizedGender);
@@ -145,7 +138,7 @@ exports.getFeaturedCollections = async (req, res, next) => {
     res.status(500).json({ message: 'Internal server error' });
   }
 };
-// Second endpoint for main products (remains unchanged)
+
 exports.getMainProducts = async (req, res, next) => {
   try {
     const { 
@@ -195,7 +188,6 @@ exports.getMainProducts = async (req, res, next) => {
     res.status(500).json({ message: 'Internal server error' });
   }
 };
-
 
 exports.getSuggestionsProducts = async (req, res, next) => {
   try {
@@ -267,76 +259,66 @@ exports.getSuggestionsProducts = async (req, res, next) => {
     return res.status(500).json({ message: 'Internal server error' });
   }
 };
+
 exports.getDistinctCategoriesWithCounts = async (req, res, next) => {
-    try {
-        const gender = req.query.gender || 'all'; // Default to 'all' if not provided
-        const categories = await getDistinctProductsCategoriesWithCounts(gender);
-        
-        return res.status(200).json(categories);
-    } catch (error) {
-        console.error('Error fetching categories:', error);
-        return res.status(500).json({
-            message: 'Internal server error'
-        });
-    }
+  try {
+    const gender = req.query.gender || 'all';
+    const categories = await getDistinctProductsCategoriesWithCounts(gender);
+    return res.status(200).json(categories);
+  } catch (error) {
+    console.error('Error fetching categories:', error);
+    return res.status(500).json({ message: 'Internal server error' });
+  }
 };
 
-exports.getRelatedProductsExcludingSelectedProduct = async (req , res , next) => {
-    try{
-        const id = req.params.id;
-        const product = await getProductByID(id);
-        if (!product) {
-            return res.status(404).json({ message: 'Product not found' });
-        }
-        // Get related products
-        const relatedProducts = await getRelatedProducts(
-                    product.category, 
-                    product._id
-        );
-        res.status(200).json({
-            relatedProducts,
-            user: req.session.user || null,
-        })
+exports.getRelatedProductsExcludingSelectedProduct = async (req, res, next) => {
+  try {
+    const id = req.params.id;
+    const product = await getProductByID(id);
+    if (!product) {
+      return res.status(404).json({ message: 'Product not found' });
     }
-    catch(error){
-        console.error('Error fetching Related Products:', error);
-        return res.status(500).json({
-            message: 'Internal server error'
-        });
-    }
-}
+    const relatedProducts = await getRelatedProducts(product.category, product._id);
+    res.status(200).json({
+      relatedProducts,
+      user: req.session.user || null,
+    });
+  } catch (error) {
+    console.error('Error fetching Related Products:', error);
+    return res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
 exports.toggleLikeProduct = async (req, res, next) => {
-    try {
-      const productId = req.params.id;
-      const userId = req.session.user?.id || req.body.userId;
-      const result = await toggleLikeProduct(productId, userId);
-      
-      // Send full product data with arrays
-      res.status(200).json({
-        likedBy: result.likedBy,
-        dislikedBy: result.dislikedBy,
-        likes: result.likes,
-        dislikes: result.dislikes
-      });
-    } catch (error) {
-      console.error("Error toggling like:", error);
-      res.status(500).json({ message: error.message });
-    }
-  };  
-  exports.toggleDislikeProduct = async (req, res, next) => {
-    try {
-      const productId = req.params.id;
-      const userId = req.session.user?.id || req.body.userId;
-      const result = await toggleDislikeProduct(productId, userId);
-      res.status(200).json({
-        likedBy: result.likedBy,
-        dislikedBy: result.dislikedBy,
-        likes: result.likes,
-        dislikes: result.dislikes
-      });
-    } catch (error) {
-      console.error("Error toggling dislike:", error);
-      res.status(500).json({ message: error.message });
-    }
-  };
-  
+  try {
+    const productId = req.params.id;
+    const userId = req.session.user?.id || req.body.userId;
+    const result = await toggleLikeProduct(productId, userId);
+    res.status(200).json({
+      likedBy: result.likedBy,
+      dislikedBy: result.dislikedBy,
+      likes: result.likes,
+      dislikes: result.dislikes
+    });
+  } catch (error) {
+    console.error("Error toggling like:", error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+exports.toggleDislikeProduct = async (req, res, next) => {
+  try {
+    const productId = req.params.id;
+    const userId = req.session.user?.id || req.body.userId;
+    const result = await toggleDislikeProduct(productId, userId);
+    res.status(200).json({
+      likedBy: result.likedBy,
+      dislikedBy: result.dislikedBy,
+      likes: result.likes,
+      dislikes: result.dislikes
+    });
+  } catch (error) {
+    console.error("Error toggling dislike:", error);
+    res.status(500).json({ message: error.message });
+  }
+};
