@@ -150,12 +150,12 @@ exports.fetchMainProducts = async (req, res, next) => {
       search, 
       color 
     } = req.query;
-    const normalizedGender = gender; // Match getFeaturedCollections
+    const normalizedGender = gender; // Keeps 'Special' as-is
     const skip = (page - 1) * limit;
 
     let query = {};
-    if (normalizedGender !== 'all') query.gender = normalizedGender;
-    if (color) query.color = { $regex: new RegExp(`^${color.trim()}$`, 'i') };
+    if (normalizedGender !== 'all') query.gender = { $in: [normalizedGender] }; // Match array
+    if (color) query.colors = { $in: [new RegExp(`^${color.trim()}$`, 'i')] }; // Fixed to 'colors'
     if (category) query.category = { $regex: new RegExp(`^${category.trim()}$`, 'i') };
     if (search) {
       query.$or = [
@@ -171,16 +171,14 @@ exports.fetchMainProducts = async (req, res, next) => {
       'oldest': { _id: 1 }
     }[sort] || { _id: 1 };
 
-    // Fetch main products
     let result;
     try {
       result = await getMainProducts(query, sortOptions, skip, limit);
     } catch (error) {
       console.error('Error fetching main products from model:', error);
-      throw error; // Re-throw to outer catch
+      throw error;
     }
 
-    // Fetch categories with counts
     let categoriesWithCounts = [];
     try {
       categoriesWithCounts = await getDistinctProductsCategoriesWithCounts(query);
@@ -189,7 +187,6 @@ exports.fetchMainProducts = async (req, res, next) => {
       categoriesWithCounts = [];
     }
 
-    // Fetch colors with counts
     let colorsWithCounts = [];
     try {
       colorsWithCounts = await getDistinctColorsWithCounts(query);
@@ -210,7 +207,6 @@ exports.fetchMainProducts = async (req, res, next) => {
     res.status(500).json({ message: 'Internal server error' });
   }
 };
-
 
 exports.getSuggestionsProducts = async (req, res, next) => {
   try {

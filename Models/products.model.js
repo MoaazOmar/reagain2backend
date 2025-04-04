@@ -357,34 +357,19 @@
 
     const getDistinctColorsWithCounts = async (filterQuery) => {
         try {
-            const colors = await Product.aggregate([{
-                    $match: filterQuery
-                },
-                {
-                    $group: {
-                        _id: {
-                            $toLower: "$color"
-                        },
-                        count: {
-                            $sum: 1
-                        }
-                    }
-                },
-                {
-                    $project: {
-                        _id: 0,
-                        name: "$_id",
-                        count: "$count"
-                    }
-                }
-            ]);
-            return colors;
+          const colors = await Product.aggregate([
+            { $match: filterQuery },
+            { $unwind: '$colors' }, // Flatten the array
+            { $group: { _id: { $toLower: '$colors' }, count: { $sum: 1 } } },
+            { $project: { _id: 0, name: '$_id', count: '$count' } }
+          ]);
+          return colors;
         } catch (error) {
-            console.error('Error fetching colors:', error);
-            throw error;
+          console.error('Error fetching colors:', error);
+          throw error;
         }
-    };
-    const pushTheCommentToProduct = async (productId, userId, commentText, parentId = null, rating = null) => {
+      };    
+      const pushTheCommentToProduct = async (productId, userId, commentText, parentId = null, rating = null) => {
         try {
             await connectDB();
             const newComment = {
