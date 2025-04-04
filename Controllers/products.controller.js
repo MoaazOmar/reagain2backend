@@ -177,11 +177,35 @@ exports.fetchMainProducts = async (req, res, next) => {
     }
 
     // Fetch main products with pagination, total count, and apply filters/sort
-    const { mainProducts, total } = await getMainProducts(query, sortOptions, skip, limit);
+    let mainProducts = [];
+    let total = 0;
+    try {
+      const result = await getMainProducts(query, sortOptions, skip, limit);
+      mainProducts = result.mainProducts;
+      total = result.total;
+    } catch (error) {
+      console.error('Error fetching main products from model:', error);
+      mainProducts = [];
+      total = 0;
+    }
+
     // Fetch distinct categories and their counts based on the same query
-    const categoriesWithCounts = await getDistinctProductsCategoriesWithCounts(query);
+    let categoriesWithCounts = [];
+    try {
+      categoriesWithCounts = await getDistinctProductsCategoriesWithCounts(query);
+    } catch (error) {
+      console.error('Error fetching categories with counts:', error);
+      categoriesWithCounts = [];
+    }
+
     // Fetch distinct colors and their counts based on the same query
-    const colorsWithCounts = await getDistinctColorsWithCounts(query);
+    let colorsWithCounts = [];
+    try {
+      colorsWithCounts = await getDistinctColorsWithCounts(query);
+    } catch (error) {
+      console.error('Error fetching colors with counts:', error);
+      colorsWithCounts = [];
+    }
 
     // Send response with fetched data
     res.status(200).json({
