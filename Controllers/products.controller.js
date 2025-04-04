@@ -150,7 +150,7 @@ exports.fetchMainProducts = async (req, res, next) => {
       search, 
       color 
     } = req.query;
-    const normalizedGender = gender.toLowerCase(); // Match getFeaturedCollections
+    const normalizedGender = gender; // Match getFeaturedCollections
     const skip = (page - 1) * limit;
 
     let query = {};
