@@ -55,141 +55,78 @@ exports.getSingleProduct = async (req, res, next) => {
     }
 };
 
+const { Product, getAllProducts, getProductByID, getMostLikedProducts, getMostCommentedProducts, getNewestProducts, getRandomProduct, getAllProductsMixed, 
+  getMainProducts, getDistinctProductsCategoriesWithCounts, getDistinctColorsWithCounts, getSuggestionsProducts, getTotalCount, getRelatedProducts, 
+  toggleLikeProduct, toggleDislikeProduct, getWinterProductsData, getSummerAndSpringProductsData } = require('../Models/products.model');
+
 exports.getFeaturedCollections = async (req, res, next) => {
   try {
-    const { gender = 'all' } = req.query; // Default to 'all' if no gender provided
+    const { gender = 'all' } = req.query; // Default to 'all' if no gender
     const normalizedGender = gender.toLowerCase(); // Normalize to lowercase
     console.log('Backend Received Gender:', normalizedGender);
 
     let carouselProducts = [];
     if (normalizedGender !== 'all') {
       try {
-        // Most liked product (1)
-        const mostLiked = await Product.find({ gender: { $regex: new RegExp(`^${normalizedGender}$`, 'i') } })
-          .sort({ likes: -1 })
-          .limit(1);
-
-        // Most commented product (1)
-        const mostCommented = await Product.aggregate([
-          { $match: { gender: { $regex: new RegExp(`^${normalizedGender}$`, 'i') } } },
-          { $project: { commentCount: { $size: "$comments" }, doc: "$$ROOT" } },
-          { $sort: { commentCount: -1 } },
-          { $limit: 1 },
-          { $replaceRoot: { newRoot: "$doc" } }
-        ]);
-
-        // Newest product (1)
-        const newest = await Product.find({ gender: { $regex: new RegExp(`^${normalizedGender}$`, 'i') } })
-          .sort({ createdAt: -1 })
-          .limit(1);
-
-        // Random product (1)
-        const count = await Product.countDocuments({ gender: { $regex: new RegExp(`^${normalizedGender}$`, 'i') } });
-        const randomIndex = Math.floor(Math.random() * count);
-        const random = await Product.find({ gender: { $regex: new RegExp(`^${normalizedGender}$`, 'i') } })
-          .skip(randomIndex)
-          .limit(1);
-
-        carouselProducts = [...mostLiked, ...mostCommented, ...newest, ...(random || [])].filter(Boolean);
+        const mostLiked = await getMostLikedProducts(normalizedGender, 1);      // 1 most liked
+        const mostCommented = await getMostCommentedProducts(normalizedGender, 1); // 1 most commented
+        const newest = await getNewestProducts(normalizedGender, 1);            // 1 newest
+        const random = await getRandomProduct(normalizedGender);                // 1 random
+        carouselProducts = [...mostLiked, ...mostCommented, ...newest, random].filter(Boolean);
         console.log(`Carousel for ${normalizedGender}:`, carouselProducts);
 
-        // Fill up to 4 if needed
         if (carouselProducts.length < 4) {
-          const additional = await Product.find({ gender: { $regex: new RegExp(`^${normalizedGender}$`, 'i') } })
-            .sort({ createdAt: -1 })
-            .limit(4 - carouselProducts.length);
+          const additional = await getNewestProducts(normalizedGender, 4 - carouselProducts.length);
           carouselProducts = [...carouselProducts, ...additional].slice(0, 4);
         }
       } catch (error) {
         console.error(`Error fetching carousel for ${normalizedGender}:`, error);
-        carouselProducts = await Product.find({ gender: { $regex: new RegExp(`^${normalizedGender}$`, 'i') } })
-          .sort({ createdAt: -1 })
-          .limit(4) || [];
+        carouselProducts = await getNewestProducts(normalizedGender, 4) || [];
       }
     } else {
       try {
-        // Mixed products for 'all'
-        const mostLiked = await Product.find({})
-          .sort({ likes: -1 })
-          .limit(1);
-        const mostCommented = await Product.aggregate([
-          { $match: {} },
-          { $project: { commentCount: { $size: "$comments" }, doc: "$$ROOT" } },
-          { $sort: { commentCount: -1 } },
-          { $limit: 1 },
-          { $replaceRoot: { newRoot: "$doc" } }
-        ]);
-        const newest = await Product.find({})
-          .sort({ createdAt: -1 })
-          .limit(1);
-        const count = await Product.countDocuments({});
-        const randomIndex = Math.floor(Math.random() * count);
-        const random = await Product.find({})
-          .skip(randomIndex)
-          .limit(1);
-
-        carouselProducts = [...mostLiked, ...mostCommented, ...newest, ...(random || [])].filter(Boolean);
+        carouselProducts = await getAllProductsMixed(); // Mixed products for 'all'
         console.log('Mixed carousel products:', carouselProducts);
       } catch (error) {
         console.error('Error fetching mixed carousel products:', error);
-        carouselProducts = await Product.find({})
-          .sort({ createdAt: -1 })
-          .limit(4) || [];
+        carouselProducts = await getNewestProducts('all', 4) || [];
       }
     }
 
-    // Most Liked Products (4)
+    // Most Liked Products
     let mostLikedProducts = [];
     try {
-      mostLikedProducts = await Product.find(
-        normalizedGender !== 'all' ? { gender: { $regex: new RegExp(`^${normalizedGender}$`, 'i') } } : {}
-      )
-        .sort({ likes: -1 })
-        .limit(4);
+      mostLikedProducts = await getMostLikedProducts(normalizedGender, 4);
       console.log(`mostLikedProducts for ${normalizedGender}:`, mostLikedProducts);
     } catch (error) {
       console.error(`Error fetching mostLikedProducts for ${normalizedGender}:`, error);
       mostLikedProducts = [];
     }
 
-    // Most Recent Products (4)
+    // Most Recent Products
     let mostRecentProducts = [];
     try {
-      mostRecentProducts = await Product.find(
-        normalizedGender !== 'all' ? { gender: { $regex: new RegExp(`^${normalizedGender}$`, 'i') } } : {}
-      )
-        .sort({ createdAt: -1 })
-        .limit(4);
+      mostRecentProducts = await getNewestProducts(normalizedGender, 4);
       console.log(`mostRecentProducts for ${normalizedGender}:`, mostRecentProducts);
     } catch (error) {
       console.error(`Error fetching mostRecentProducts for ${normalizedGender}:`, error);
       mostRecentProducts = [];
     }
 
-    // Winter Collection (4)
+    // Winter Collection
     let winterCollection = [];
     try {
-      winterCollection = await Product.find(
-        normalizedGender !== 'all'
-          ? { gender: { $regex: new RegExp(`^${normalizedGender}$`, 'i') }, season: 'winter' }
-          : { season: 'winter' }
-      )
-        .limit(10);
+      winterCollection = await getWinterProductsData(normalizedGender);
       console.log(`winterCollection for ${normalizedGender}:`, winterCollection);
     } catch (error) {
       console.error(`Error fetching winterCollection for ${normalizedGender}:`, error);
       winterCollection = [];
     }
 
-    // Summer Collection (4)
+    // Summer Collection
     let summerCollection = [];
     try {
-      summerCollection = await Product.find(
-        normalizedGender !== 'all'
-          ? { gender: { $regex: new RegExp(`^${normalizedGender}$`, 'i') }, season: { $in: ['summer', 'spring'] } }
-          : { season: { $in: ['summer', 'spring'] } }
-      )
-        .limit(10);
+      summerCollection = await getSummerAndSpringProductsData(normalizedGender);
       console.log(`summerCollection for ${normalizedGender}:`, summerCollection);
     } catch (error) {
       console.error(`Error fetching summerCollection for ${normalizedGender}:`, error);
@@ -208,8 +145,6 @@ exports.getFeaturedCollections = async (req, res, next) => {
     res.status(500).json({ message: 'Internal server error' });
   }
 };
-
-
 // Second endpoint for main products (remains unchanged)
 exports.getMainProducts = async (req, res, next) => {
   try {
