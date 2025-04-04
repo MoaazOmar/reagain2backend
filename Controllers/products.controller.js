@@ -141,6 +141,7 @@ exports.getFeaturedCollections = async (req, res, next) => {
 
 exports.fetchMainProducts = async (req, res, next) => {
   try {
+    // Extract query parameters with defaults
     const { 
       gender = 'all', 
       category, 
@@ -150,12 +151,13 @@ exports.fetchMainProducts = async (req, res, next) => {
       search, 
       color 
     } = req.query;
-    const normalizedGender = gender; // Keeps 'Special' as-is
-    const skip = (page - 1) * limit;
+    console.log('Backend Received Gender:', gender);
+    const skip = (page - 1) * limit; // Calculate skip value for pagination
 
+    // Build query object for main products based on filters
     let query = {};
-    if (normalizedGender !== 'all') query.gender = { $in: [normalizedGender] }; // Match array
-    if (color) query.colors = { $in: [new RegExp(`^${color.trim()}$`, 'i')] }; // Fixed to 'colors'
+    if (gender && gender !== 'all') query.gender = { $in: [gender] }; // Match array, keep case
+    if (color) query.colors = { $in: [new RegExp(`^${color.trim()}$`, 'i')] }; // Filter by colors array
     if (category) query.category = { $regex: new RegExp(`^${category.trim()}$`, 'i') };
     if (search) {
       query.$or = [
@@ -164,50 +166,36 @@ exports.fetchMainProducts = async (req, res, next) => {
       ];
     }
 
-    const sortOptions = {
-      'newest': { _id: -1 },
-      'price_asc': { price: 1 },
-      'price_desc': { price: -1 },
-      'oldest': { _id: 1 }
-    }[sort] || { _id: 1 };
-
-    let result;
-    try {
-      result = await getMainProducts(query, sortOptions, skip, limit);
-    } catch (error) {
-      console.error('Error fetching main products from model:', error);
-      throw error;
+    // Define sorting options based on query parameter
+    let sortOptions = {};
+    switch (sort) {
+      case 'newest': sortOptions = { _id: -1 }; break;
+      case 'price_asc': sortOptions = { price: 1 }; break;
+      case 'price_desc': sortOptions = { price: -1 }; break;
+      case 'oldest': sortOptions = { _id: 1 }; break;
+      default: sortOptions = { _id: 1 };
     }
 
-    let categoriesWithCounts = [];
-    try {
-      categoriesWithCounts = await getDistinctProductsCategoriesWithCounts(query);
-    } catch (error) {
-      console.error('Error fetching categories with counts:', error);
-      categoriesWithCounts = [];
-    }
+    // Fetch main products with pagination, total count, and apply filters/sort
+    const { mainProducts, total } = await getMainProducts(query, sortOptions, skip, limit);
+    // Fetch distinct categories and their counts based on the same query
+    const categoriesWithCounts = await getDistinctProductsCategoriesWithCounts(query);
+    // Fetch distinct colors and their counts based on the same query
+    const colorsWithCounts = await getDistinctColorsWithCounts(query);
 
-    let colorsWithCounts = [];
-    try {
-      colorsWithCounts = await getDistinctColorsWithCounts(query);
-    } catch (error) {
-      console.error('Error fetching colors with counts:', error);
-      colorsWithCounts = [];
-    }
-
+    // Send response with fetched data
     res.status(200).json({
-      products: result.mainProducts,
-      totalPages: Math.ceil(result.total / limit),
+      products: mainProducts,
+      totalPages: Math.ceil(total / limit),
       currentPage: Number(page),
       categoriesWithCounts,
       colorsWithCounts
     });
   } catch (error) {
-    console.error('Error in fetchMainProducts:', error);
-    res.status(500).json({ message: 'Internal server error' });
+    console.error('Error fetching main products:', error);
+    return res.status(500).json({ message: 'Internal server error' });
   }
 };
-
 exports.getSuggestionsProducts = async (req, res, next) => {
   try {
     const query = req.query.query;
