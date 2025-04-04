@@ -327,6 +327,7 @@
     // gets Distinct products Categories 
     const getDistinctProductsCategoriesWithCounts = async (filterQuery) => {
         try {
+            await connectDB()
             const categories = await Product.aggregate([{
                     $match: filterQuery
                 },
@@ -357,6 +358,7 @@
 
     const getDistinctColorsWithCounts = async (filterQuery) => {
         try {
+         await connectDB()
           const colors = await Product.aggregate([
             { $match: filterQuery },
             { $unwind: '$colors' }, // Flatten the array
@@ -367,6 +369,8 @@
         } catch (error) {
           console.error('Error fetching colors:', error);
           throw error;
+        }finally{
+            await disconnectDB()
         }
       };    
       const pushTheCommentToProduct = async (productId, userId, commentText, parentId = null, rating = null) => {
@@ -394,6 +398,8 @@
         } catch (error) {
             console.error('Error adding comment:', error);
             throw error;
+        }finally{
+            await disconnectDB()
         }
     }
     const editComment = async (productId, commentId, userId, newText, isAdmin) => {
