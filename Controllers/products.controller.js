@@ -59,7 +59,7 @@ exports.getSingleProduct = async (req, res, next) => {
 exports.getFeaturedCollections = async (req, res, next) => {
   try {
     const { gender = 'all' } = req.query;
-    const normalizedGender = gender.toLowerCase();
+    const normalizedGender = gender;
     console.log('Backend Received Gender:', normalizedGender);
 
     let carouselProducts = [];
