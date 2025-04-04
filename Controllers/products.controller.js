@@ -154,7 +154,7 @@ exports.fetchMainProducts = async (req, res, next) => {
     console.log('Backend Received Gender:', gender);
     const skip = (page - 1) * limit; // Calculate skip value for pagination
 
-    // Build query object for main products based on filters
+    // Build query object for mains products based on filters
     let query = {};
     if (gender && gender !== 'all') query.gender = { $in: [gender] }; // Match array, keep case
     if (color) query.colors = { $in: [new RegExp(`^${color.trim()}$`, 'i')] }; // Filter by colors array
