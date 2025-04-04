@@ -318,7 +318,7 @@
                 mainProducts,
                 total
             };
-        } catch {
+        } catch  (error){
             console.error('Error occuring during fetching products:', error);
             throw error;
 
