@@ -16,7 +16,6 @@ const connectDB = async () => {
     });
     console.log('MongoDB connected successfully');
 
-    // Log connection state
     mongoose.connection.on('disconnected', () => {
       console.log('MongoDB disconnected');
     });
