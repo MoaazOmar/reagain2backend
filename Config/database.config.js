@@ -3,24 +3,28 @@ const mongoose = require('mongoose');
 const connectDB = async () => {
   try {
     const uri = process.env.MONGODB_URI;
-    if (!uri) throw new Error("MONGODB_URI not set");
-
-    // Updated connection options
+    console.log('Attempting to connect to MongoDB with URI:', uri);
+    if (!uri) {
+      throw new Error("MONGODB_URI environment variable is not set");
+    }
     await mongoose.connect(uri, {
+      tls: true,
+      tlsAllowInvalidCertificates: false,
       serverSelectionTimeoutMS: 5000,
-      socketTimeoutMS: 45000,
-      maxPoolSize: 10,
-      // Keep alive settings should be under socket options
-      socket: {
-        keepAlive: true,
-        keepAliveInitialDelay: 300000
-      }
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
     });
-
     console.log('MongoDB connected successfully');
+
+    mongoose.connection.on('disconnected', () => {
+      console.log('MongoDB disconnected');
+    });
+    mongoose.connection.on('error', (err) => {
+      console.error('MongoDB connection error:', err);
+    });
   } catch (error) {
     console.error('MongoDB connection error:', error);
-    throw error;
+    console.warn('Failed to connect to MongoDB. Continuing without database connection...');
   }
 };
 
