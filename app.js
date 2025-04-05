@@ -54,16 +54,19 @@ STORE.on('error', (error) => {
 // });
 // Update session configuration
 const sessionMiddleware = session({
-    secret: process.env.SESSION_SECRET || 'your-secret-key',
+    secret: process.env.SESSION_SECRET,
     saveUninitialized: false,
     resave: false,
     store: STORE,
-    proxy: true, // Add this for production behind proxy
-    cookie: { 
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+    proxy: true, 
+    cookie: {
+        secure: true, 
+        sameSite: 'none', 
         httpOnly: true,
-        maxAge: 1000 * 60 * 60 * 24 * 7 // 1 week
+        maxAge: 1000 * 60 * 60 * 24 * 7, // 1 week
+        domain: process.env.NODE_ENV === 'production' 
+            ? '.koyeb.app' 
+            : undefined
     }
 });
 
@@ -78,6 +81,7 @@ app.use(express.json());
 app.use(cors({
     origin: 'https://moaazomar.github.io', 
     credentials: true, 
+    allowedHeaders: ['Content-Type', 'Authorization', 'Cookie'],
     exposedHeaders: ['set-cookie']
 }));
 
@@ -103,6 +107,14 @@ io.on('connection', (socket) => {
     socket.on('joinRoom', (roomId) => {
         console.log('Socket joining room:', roomId);
         socket.join(roomId);
+    });
+});
+router.get('/session-check', (req, res) => {
+    res.json({
+        authenticated: !!req.session.user,
+        user: req.session.user,
+        sessionId: req.sessionID,
+        cookies: req.headers.cookie
     });
 });
 
