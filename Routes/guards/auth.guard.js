@@ -5,5 +5,6 @@ exports.preventAccessLogin   = (req,res,next)=>{
 
 exports.isLoggedIn = (req , res , next)=>{
     if(req.session.user) next()
-    else res.redirect('/login')
+    res.status(401).json({ message: 'Unauthorized. Please log in.' });
+
 }
