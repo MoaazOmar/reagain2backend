@@ -5,18 +5,22 @@ const connectDB = async () => {
     const uri = process.env.MONGODB_URI;
     if (!uri) throw new Error("MONGODB_URI not set");
 
+    // Updated connection options
     await mongoose.connect(uri, {
       serverSelectionTimeoutMS: 5000,
       socketTimeoutMS: 45000,
-      maxPoolSize: 10, // Add connection pooling
-      keepAlive: true,
-      keepAliveInitialDelay: 300000
+      maxPoolSize: 10,
+      // Keep alive settings should be under socket options
+      socket: {
+        keepAlive: true,
+        keepAliveInitialDelay: 300000
+      }
     });
 
     console.log('MongoDB connected successfully');
   } catch (error) {
     console.error('MongoDB connection error:', error);
-    throw error; // Re-throw to handle in app.js
+    throw error;
   }
 };
 
