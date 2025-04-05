@@ -1,7 +1,6 @@
 const mongoose = require('mongoose');
 const {
     connectDB,
-    disconnectDB
 } = require('../Config/database.config');
 const bcrypt = require('bcrypt');
 const ADMIN_USER_IDS = require('../Config/isAdmin')
@@ -50,9 +49,7 @@ const createNewUser = async (username, email, password) => {
     } catch (error) {
         console.error(error.message);
         throw error;
-    } finally {
-        await disconnectDB();
-    }
+    } 
 };
 
 
@@ -84,9 +81,7 @@ const loginForUser = async (username, password) => {
     } catch (error) {
         console.error(error.message);
         throw error;
-    } finally {
-        await disconnectDB();
-    }
+    } 
 };
 module.exports = {
     User,
