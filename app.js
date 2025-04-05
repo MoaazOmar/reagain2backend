@@ -25,12 +25,13 @@ app.use('/images', express.static(path.join(__dirname, 'images')));
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.use(cors({
-    origin: 'https://moaazomar.github.io', // Your frontend URL
-    credentials: true,                     // Still needed for consistency, though not for cookies
+    origin: 'https://moaazomar.github.io',
+    credentials: true, // Keep for consistency, though not needed for JWT
     allowedHeaders: ['Content-Type', 'Authorization'],
     exposedHeaders: ['Authorization']
-}));
-
+  }));
+  
+  
 app.set('trust proxy', 1); // For Koyeb’s load balancer
 
 // Middleware to log requests (optional, for debugging)
