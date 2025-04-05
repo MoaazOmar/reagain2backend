@@ -2,7 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const app = express();
-const port = process.env.PORT || 3000;
+const port = process.env.PORT || 8000; // Updated to match logs
 console.log('Using port:', port);
 const fs = require('fs');
 
@@ -46,42 +46,38 @@ STORE.on('error', (error) => {
 STORE.on('connected', () => {
     console.log('MongoDB session store connected successfully');
 });
+STORE.on('sessionSaved', (sid) => {
+    console.log('Session saved to store:', sid);
+});
+STORE.on('sessionRetrieved', (sid) => {
+    console.log('Session retrieved from store:', sid);
+});
 
-// const sessionMiddleware = session({
-//     secret: process.env.SESSION_SECRET || 'this my secret hash express sessions to encrypt......',
-//     saveUninitialized: false,
-//     resave: false,
-//     store: STORE,
-//     cookie: { secure: process.env.NODE_ENV === 'production' }
-// });
 // Update session configuration
 const sessionMiddleware = session({
     secret: process.env.SESSION_SECRET || 'this my secret hash express sessions to encrypt......',
     saveUninitialized: false,
     resave: false,
     store: STORE,
-    proxy: true, // Retained from your update, though redundant with trust proxy
     cookie: {
-        secure: true, // Required for HTTPS
-        sameSite: 'none', // Required for cross-origin requests
+        secure: true, // Required for HTTPS on Koyeb
+        sameSite: 'none', // Required for cross-origin from GitHub Pages
         httpOnly: true,
-        maxAge: 1000 * 60 * 60 * 24 * 7, // 1 week
-        domain: process.env.NODE_ENV === 'production' 
-            ? '.koyeb.app' 
-            : undefined
+        maxAge: 1000 * 60 * 60 * 24 * 7 // 1 week
+        // Removed domain to test exact host match
     }
 });
 
 // Add trust proxy setting at top of app.js
-app.set('trust proxy', 1); // Add this line before session middleware
+app.set('trust proxy', 1);
 
 app.use(sessionMiddleware);
 
 app.use(express.json());
 
 app.use(cors({
-    origin: 'https://moaazomar.github.io', // Exact origin of your Angular app
-    credentials: true, // Allow credentials (cookies, etc.)
+    origin: 'https://moaazomar.github.io',
+    credentials: true,
     allowedHeaders: ['Content-Type', 'Authorization', 'Cookie'],
     exposedHeaders: ['set-cookie']
 }));
@@ -91,6 +87,7 @@ app.use((req, res, next) => {
     console.log('Session ID:', req.sessionID);
     console.log('Session Status:', req.session ? 'Exists' : 'Missing');
     console.log('Session User:', req.session?.user || 'Unauthenticated');
+    console.log('Cookies:', req.headers.cookie || 'No cookies received');
     next();
 });
 
