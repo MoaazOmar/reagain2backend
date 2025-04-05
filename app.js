@@ -45,21 +45,40 @@ STORE.on('error', (error) => {
     console.warn('Falling back to in-memory session store due to MongoDB connection failure');
 });
 
+// const sessionMiddleware = session({
+//     secret: process.env.SESSION_SECRET || 'this my secret hash express sessions to encrypt......',
+//     saveUninitialized: false,
+//     resave: false,
+//     store: STORE,
+//     cookie: { secure: process.env.NODE_ENV === 'production' }
+// });
+// Update session configuration
 const sessionMiddleware = session({
-    secret: process.env.SESSION_SECRET || 'this my secret hash express sessions to encrypt......',
+    secret: process.env.SESSION_SECRET || 'your-secret-key',
     saveUninitialized: false,
     resave: false,
     store: STORE,
-    cookie: { secure: process.env.NODE_ENV === 'production' }
+    proxy: true, // Add this for production behind proxy
+    cookie: { 
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+        httpOnly: true,
+        maxAge: 1000 * 60 * 60 * 24 * 7 // 1 week
+    }
 });
+
+// Add trust proxy setting at top of app.js
+app.set('trust proxy', 1); // Add this line before session middleware
+
 app.use(sessionMiddleware);
 
 app.use(express.json());
 
 
 app.use(cors({
-    origin: 'https://moaazomar.github.io', // Exact origin of your Angular app
-    credentials: true // Allow credentials (cookies, etc.)
+    origin: 'https://moaazomar.github.io', 
+    credentials: true, 
+    exposedHeaders: ['set-cookie']
 }));
 
 app.use(flash());
