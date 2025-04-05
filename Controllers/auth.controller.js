@@ -16,7 +16,7 @@ exports.postLogin = async (req, res, next) => {
                 email: isValidUser.email,
                 isAdmin: isAdminUser
             };
-            const token = jwt.sign(user, process.env.JWT_SECRET || 'your-secret-key', { expiresIn: '1h' });
+            const token = jwt.sign(user, process.env.JWT_SECRET, { expiresIn: '1h' });
             return res.status(200).json({
                 message: 'Logged in successfully!',
                 token: token,
