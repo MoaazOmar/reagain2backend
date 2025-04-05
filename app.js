@@ -86,7 +86,12 @@ app.use(cors({
 }));
 
 app.use(flash());
-
+app.use((req, res, next) => {
+    console.log('Session ID:', req.sessionID);
+    console.log('Session Status:', req.session ? 'Exists' : 'Missing');
+    console.log('Session User:', req.session?.user || 'Unauthenticated');
+    next();
+  });
 app.set('view engine', 'ejs');
 app.set('views', 'views');
 
