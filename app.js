@@ -33,7 +33,6 @@ const STORE = new sessionStore({
     uri: uri,
     collection: 'sessions',
     connectionOptions: {
-        ssl: true,
         tls: true,
         tlsAllowInvalidCertificates: false,
         serverSelectionTimeoutMS: 5000
@@ -43,6 +42,9 @@ const STORE = new sessionStore({
 STORE.on('error', (error) => {
     console.error('Session store error:', error);
     console.warn('Falling back to in-memory session store due to MongoDB connection failure');
+});
+STORE.on('connected', () => {
+    console.log('MongoDB session store connected successfully');
 });
 
 // const sessionMiddleware = session({
@@ -54,14 +56,14 @@ STORE.on('error', (error) => {
 // });
 // Update session configuration
 const sessionMiddleware = session({
-    secret: process.env.SESSION_SECRET,
+    secret: process.env.SESSION_SECRET || 'this my secret hash express sessions to encrypt......',
     saveUninitialized: false,
     resave: false,
     store: STORE,
-    proxy: true, 
+    proxy: true, // Retained from your update, though redundant with trust proxy
     cookie: {
-        secure: true, 
-        sameSite: 'none', 
+        secure: true, // Required for HTTPS
+        sameSite: 'none', // Required for cross-origin requests
         httpOnly: true,
         maxAge: 1000 * 60 * 60 * 24 * 7, // 1 week
         domain: process.env.NODE_ENV === 'production' 
@@ -77,10 +79,9 @@ app.use(sessionMiddleware);
 
 app.use(express.json());
 
-
 app.use(cors({
-    origin: 'https://moaazomar.github.io', 
-    credentials: true, 
+    origin: 'https://moaazomar.github.io', // Exact origin of your Angular app
+    credentials: true, // Allow credentials (cookies, etc.)
     allowedHeaders: ['Content-Type', 'Authorization', 'Cookie'],
     exposedHeaders: ['set-cookie']
 }));
@@ -91,7 +92,8 @@ app.use((req, res, next) => {
     console.log('Session Status:', req.session ? 'Exists' : 'Missing');
     console.log('Session User:', req.session?.user || 'Unauthenticated');
     next();
-  });
+});
+
 app.set('view engine', 'ejs');
 app.set('views', 'views');
 

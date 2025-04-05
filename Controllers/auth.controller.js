@@ -37,45 +37,41 @@ exports.postSignup = async (req, res, next) => {
 
 exports.postLogin = async (req, res, next) => {
     const { username, password } = req.body;
-  
+
     try {
-      const isValidUser = await loginForUser(username, password);
-  
-      if (isValidUser) {
-        const isAdminUser = ADMIN_USER_IDS.includes(isValidUser._id.toString());
-  
-        req.session.regenerate((err) => {
-          if (err) return res.status(500).json({ message: 'Session error' });
-  
-          req.session.user = {
-            id: isValidUser._id,
-            username: isValidUser.username,
-            email: isValidUser.email,
-            isAdmin: isAdminUser
-          };
-  
-          // Force session save before response
-          req.session.save((err) => {
-            if (err) {
-              console.error('Session save error:', err);
-              return res.status(500).json({ message: 'Session save failed' });
-            }
-  
-            console.log("Session after login:", req.session.user);
-            res.status(200).json({
-              message: 'Logged in successfully!',
-              user: req.session.user,
-              sessionId: req.sessionID // Include session ID in response
+        const isValidUser = await loginForUser(username, password);
+
+        if (isValidUser) {
+            const isAdminUser = ADMIN_USER_IDS.includes(isValidUser._id.toString());
+
+            req.session.user = {
+                id: isValidUser._id,
+                username: isValidUser.username,
+                email: isValidUser.email,
+                isAdmin: isAdminUser
+            };
+
+            req.session.save((err) => {
+                if (err) {
+                    console.error('Session save error:', err);
+                    return res.status(500).json({ message: 'Session save failed' });
+                }
+
+                console.log("Session after login:", req.session.user);
+                console.log("Session ID after login:", req.sessionID);
+                res.status(200).json({
+                    message: 'Logged in successfully!',
+                    user: req.session.user,
+                    sessionId: req.sessionID
+                });
             });
-          });
-        });
-      } else {
-        res.status(400).json({ message: 'Invalid credentials' });
-      }
+        } else {
+            res.status(400).json({ message: 'Invalid credentials' });
+        }
     } catch (error) {
-      res.status(500).json({ message: error.message });
+        res.status(500).json({ message: error.message });
     }
-  };
+};
 exports.getLogin = (req, res, next) => {
     res.status(200).json({
         messages: {
