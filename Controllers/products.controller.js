@@ -47,8 +47,7 @@ exports.getSingleProduct = async (req, res, next) => {
 
     res.status(200).json({
       product,
-      user: req.session.user || null,
-      isAdmin: req.session.user?.isAdmin || false
+      user: req.user || null,
     });
   } catch (error) {
     console.error('Error fetching the product', error);
@@ -341,7 +340,8 @@ exports.getRelatedProductsExcludingSelectedProduct = async (req, res, next) => {
     const relatedProducts = await getRelatedProducts(product.category, product._id);
     res.status(200).json({
       relatedProducts,
-      user: req.session.user || null,
+      user: req.user || null,
+      isAdmin: req.user?.isAdmin || false
     });
   } catch (error) {
     console.error('Error fetching Related Products:', error);
@@ -352,7 +352,7 @@ exports.getRelatedProductsExcludingSelectedProduct = async (req, res, next) => {
 exports.toggleLikeProduct = async (req, res, next) => {
   try {
     const productId = req.params.id;
-    const userId = req.session.user?.id || req.body.userId;
+    const userId = req.user?.id || req.body.userId;
     const result = await toggleLikeProduct(productId, userId);
     res.status(200).json({
       likedBy: result.likedBy,
@@ -369,7 +369,7 @@ exports.toggleLikeProduct = async (req, res, next) => {
 exports.toggleDislikeProduct = async (req, res, next) => {
   try {
     const productId = req.params.id;
-    const userId = req.session.user?.id || req.body.userId;
+    const userId = req.user?.id || req.body.userId;
     const result = await toggleDislikeProduct(productId, userId);
     res.status(200).json({
       likedBy: result.likedBy,

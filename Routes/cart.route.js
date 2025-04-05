@@ -3,12 +3,7 @@ const { check } = require('express-validator');
 const cartController = require('../Controllers/cart.controller');
 const authGuard = require('./guards/auth.guard');
 
-router.get(
-    '/',
-    authGuard.isLoggedIn,
-    cartController.getCart
-)
-
+router.get('/', authGuard.isLoggedIn, cartController.getCart);
 
 router.post(
     '/', 
@@ -21,25 +16,17 @@ router.post(
     '/save', 
     authGuard.isLoggedIn,
     check("amount").not().isEmpty().withMessage("The amount is required").isInt({ min: 1 }).withMessage("The minimum amount must be at least 1"),
-    cartController.postSave
+    cartController.postCartSave
 );
 
 router.post(
     '/delete',
     authGuard.isLoggedIn,
     cartController.postDelete
-)
+);
 
-router.post('/clear', authGuard.isLoggedIn, (req, res, next) => {
-    console.log('Session user when clearing cart:', req.session.user);
-    if (!req.session.user) {
-        return res.status(401).send({ message: 'Unauthorized access, please log in.' });
-    }
-    next();
-}, cartController.postClearItems);
-
+router.post('/clear', authGuard.isLoggedIn, cartController.postClearItems);
 
 router.get('/checkout', authGuard.isLoggedIn, cartController.getCheckout);
-
 
 module.exports = router;

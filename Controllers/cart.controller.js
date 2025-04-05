@@ -1,37 +1,27 @@
 const { validationResult } = require('express-validator');
-const { addNewItem, getItemsByUser, editItem, deleteProduct } = require('../Models/cart.model');
-const { Product } = require('../Models/products.model');
-const {deleteAllCartProducts} = require('../Models/cart.model')
-
+const { addNewItem, getItemsByUser, editItem, deleteProduct, deleteAllCartProducts } = require('../Models/cart.model');
 
 exports.getCart = async (req, res, next) => {
     try {
-        console.log('Session user after many modification:', req.session.user); // Debug session
-        const items = await getItemsByUser(req.session.user.id) || [];
-        console.log('Session user after many modification:', req.session.user); // Debug session
-        console.log('Cart items from database:', items); // Debug cart items
+        const items = await getItemsByUser(req.user.id) || [];
+        console.log('Cart items from database:', items);
         res.status(200).json({
-            messages: {
-                error: req.flash('error'),
-                success: req.flash('success')
-            },
+            messages: { error: [], success: [] },
             items: items,
             isUser: true,
-            Userid: req.session.user ? req.session.user.id : null,
-            isAdmin: req.session.user ? req.session.user.isAdmin : false
+            Userid: req.user ? req.user.id : null,
+            isAdmin: req.user ? req.user.isAdmin : false
         });
     } catch (error) {
         console.error('Error fetching cart items', error);
         res.status(500).json({ message: 'Failed to fetch cart items' });
     }
 };
+
 exports.postCart = async (req, res, next) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-        return res.status(400).json({
-            message: 'Validation failed',
-            errors: errors.array().map(error => error.msg)
-        });
+        return res.status(400).json({ message: 'Validation failed', errors: errors.array() });
     }
     try {
         const newItem = await addNewItem({
@@ -39,11 +29,10 @@ exports.postCart = async (req, res, next) => {
             name: req.body.name,
             price: req.body.price,
             productID: req.body.productID,
-            userID: req.session.user.id,
+            userID: req.user.id,
             image: req.body.image,
             timestamp: Date.now()
         });
-
         res.status(201).json({ message: 'The product was added to the cart successfully', item: newItem });
     } catch (error) {
         console.error('An error occurred while adding item to cart', error);
@@ -51,23 +40,18 @@ exports.postCart = async (req, res, next) => {
     }
 };
 
-exports.postSave = async (req, res, next) => {
+exports.postCartSave = async (req, res, next) => {
     const errors = validationResult(req);
     if (errors.isEmpty()) {
         try {
             const result = await editItem(req.body.cartId, { amount: req.body.amount, timestamp: Date.now() });
             res.status(200).json({ message: 'Item updated successfully', result });
-            console.log('Received cartId:', req.body.cartId, 'amount:', req.body.amount);
-
         } catch (error) {
             console.error('Error updating item:', error);
             res.status(500).json({ message: 'Failed to update item. Please try again.' });
         }
     } else {
-        res.status(400).json({
-            message: 'Validation failed',
-            errors: errors.array().map(error => error.msg)
-        });
+        res.status(400).json({ message: 'Validation failed', errors: errors.array() });
     }
 };
 
@@ -84,15 +68,12 @@ exports.postDelete = async (req, res, next) => {
 
 exports.getCheckout = async (req, res) => {
     try {
-        const items = await getItemsByUser(req.session.user.id) || [];
+        const items = await getItemsByUser(req.user.id) || [];
         res.status(200).json({
             items: items,
-            messages: {
-                error: req.flash('error'),
-                success: req.flash('success')
-            },
+            messages: { error: [], success: [] },
             isUser: true,
-            Userid: req.session.user.id
+            Userid: req.user.id
         });
     } catch (error) {
         console.error('Error fetching checkout items:', error);
@@ -102,9 +83,8 @@ exports.getCheckout = async (req, res) => {
 
 exports.postClearItems = async (req, res) => {
     try {
-        const userId = req.session.user.id;
+        const userId = req.user.id;
         const result = await deleteAllCartProducts(userId);
-        
         if (result.deletedCount > 0) {
             res.status(200).json({ message: 'All cart items have been removed successfully' });
         } else {

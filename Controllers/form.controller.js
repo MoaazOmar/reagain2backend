@@ -6,8 +6,8 @@ exports.getForm = async (req, res, next) => {
     try {
         res.status(200).json({
             message: 'Form data fetched successfully',
-            isAdmin: req.session.user ? req.session.user.isAdmin : false,
-            userId: req.session.user ? req.session.user.id : null
+            // isAdmin: req.session.user ? req.session.user.isAdmin : false,
+            // userId: req.session.user ? req.session.user.id : null
         });
     } catch (error) {
         console.error('Error fetching form data:', error);

@@ -1,10 +1,10 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const mongoose = require('mongoose');
 const app = express();
-const port = process.env.PORT || 8000; // Updated to match logs
+const port = process.env.PORT || 8000;
 console.log('Using port:', port);
-const fs = require('fs');
 
 const homeRouter = require('./Routes/home.route');
 const connectToDB = require('./Config/database.config');
@@ -16,78 +16,27 @@ const adminRouter = require('./Routes/admin.route');
 const formRouter = require('./Routes/form.route');
 const orderRouter = require('./Routes/order.route');
 
-const session = require('express-session');
-const sessionStore = require('connect-mongodb-session')(session);
-const flash = require('connect-flash');
-
 app.use(express.urlencoded({ extended: true }));
+app.use(express.json());
 
 app.use(express.static(path.join(__dirname, 'assets')));
 app.use(express.static(path.join(__dirname, 'images')));
 app.use('/images', express.static(path.join(__dirname, 'images')));
 app.use(express.static(path.join(__dirname, 'public')));
 
-const uri = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/online-shops';
-console.log('Session store URI:', uri);
-const STORE = new sessionStore({
-    uri: uri,
-    collection: 'sessions',
-    connectionOptions: {
-        tls: true,
-        tlsAllowInvalidCertificates: false,
-        serverSelectionTimeoutMS: 5000
-    }
-});
-
-STORE.on('error', (error) => {
-    console.error('Session store error:', error);
-    console.warn('Falling back to in-memory session store due to MongoDB connection failure');
-});
-STORE.on('connected', () => {
-    console.log('MongoDB session store connected successfully');
-});
-STORE.on('sessionSaved', (sid) => {
-    console.log('Session saved to store:', sid);
-});
-STORE.on('sessionRetrieved', (sid) => {
-    console.log('Session retrieved from store:', sid);
-});
-
-// Update session configuration
-const sessionMiddleware = session({
-    secret: process.env.SESSION_SECRET || 'this my secret hash express sessions to encrypt......',
-    saveUninitialized: false,
-    resave: false,
-    store: STORE,
-    cookie: {
-        secure: true, // Required for HTTPS on Koyeb
-        sameSite: 'none', // Required for cross-origin from GitHub Pages
-        httpOnly: true,
-        maxAge: 1000 * 60 * 60 * 24 * 7 // 1 week
-        // Removed domain to test exact host match
-    }
-});
-
-// Add trust proxy setting at top of app.js
-app.set('trust proxy', 1);
-
-app.use(sessionMiddleware);
-
-app.use(express.json());
-
 app.use(cors({
-    origin: 'https://moaazomar.github.io',
-    credentials: true,
-    allowedHeaders: ['Content-Type', 'Authorization', 'Cookie'],
-    exposedHeaders: ['set-cookie']
+    origin: 'https://moaazomar.github.io', // Your frontend URL
+    credentials: true,                     // Still needed for consistency, though not for cookies
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    exposedHeaders: ['Authorization']
 }));
 
-app.use(flash());
+app.set('trust proxy', 1); // For Koyeb’s load balancer
+
+// Middleware to log requests (optional, for debugging)
 app.use((req, res, next) => {
-    console.log('Session ID:', req.sessionID);
-    console.log('Session Status:', req.session ? 'Exists' : 'Missing');
-    console.log('Session User:', req.session?.user || 'Unauthenticated');
-    console.log('Cookies:', req.headers.cookie || 'No cookies received');
+    console.log('Request URL:', req.url);
+    console.log('Request Headers:', req.headers);
     next();
 });
 
@@ -105,8 +54,7 @@ const io = new Server(server, {
     }
 });
 
-require('./public/newComment.socket')(io, sessionMiddleware);
-
+// Assuming you still need Socket.io (no session middleware needed now)
 io.on('connection', (socket) => {
     socket.on('joinRoom', (roomId) => {
         console.log('Socket joining room:', roomId);

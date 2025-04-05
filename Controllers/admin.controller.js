@@ -26,8 +26,8 @@ exports.getAdd = (req, res, next) => {
             error: req.flash('error'),
             success: req.flash('success')
         },
-        isAdmin: req.session.user ? req.session.user.isAdmin : false,
-        Userid: req.session.user ? req.session.user.id : null
+        isAdmin: req.user ? req.user.isAdmin : false,
+        Userid: req.user ? req.user.id : null
     });
 };
 
@@ -109,8 +109,8 @@ exports.getOrders = async (req, res, next) => {
                 error: req.flash('error'),
                 success: req.flash('success')
             },
-            isAdmin: req.session.user ? req.session.user.isAdmin : false,
-            Userid: req.session.user ? req.session.user.id : null
+            isAdmin: req.user ? req.user.isAdmin : false,
+            Userid: req.user ? req.user.id : null        
         });
     } catch (error) {
         console.error('Error fetching orders:', error);
@@ -143,8 +143,8 @@ exports.postOrders = async (req, res, next) => {
 
         for (let i = 0; i < itemsCount; i++) {
             const order = new Order({
-                userID: req.session.user.id,
-                username: req.session.user.username,
+                userID: req.user.id,
+                username: req.user.username,
                 custmorName,
                 address,
                 name: Array.isArray(name) ? name[i] : name,
@@ -197,8 +197,8 @@ exports.getProductList = async (req, res, next) => {
                 error: req.flash('error'),
                 success: req.flash('success')
             },
-            isAdmin: req.session.user ? req.session.user.isAdmin : false,
-            Userid: req.session.user ? req.session.user.id : null
+            isAdmin: req.user ? req.user.isAdmin : false,
+            Userid: req.user ? req.user.id : null
         });
     } catch (error) {
         console.error("Error fetching products:", error);
