@@ -109,14 +109,6 @@ io.on('connection', (socket) => {
         socket.join(roomId);
     });
 });
-router.get('/session-check', (req, res) => {
-    res.json({
-        authenticated: !!req.session.user,
-        user: req.session.user,
-        sessionId: req.sessionID,
-        cookies: req.headers.cookie
-    });
-});
 
 app.use('/cart', cartRouter);
 app.use('/auth', authRouter);
