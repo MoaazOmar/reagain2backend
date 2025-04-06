@@ -2,29 +2,27 @@ const mongoose = require('mongoose');
 
 const connectDB = async () => {
   try {
-    const uri = process.env.MONGODB_URI;
-    if (!uri) {
-      throw new Error('MONGODB_URI environment variable is not set');
-    }
-    console.log('Attempting to connect to MongoDB with URI:', uri);
-    await mongoose.connect(uri, {
-      tls: true,
-      tlsAllowInvalidCertificates: false,
-      serverSelectionTimeoutMS: 5000,
+    await mongoose.connect(process.env.MONGODB_URI, {
       useNewUrlParser: true,
       useUnifiedTopology: true,
+      serverSelectionTimeoutMS: 5000, // Keep trying for 5 seconds
+      socketTimeoutMS: 45000 // Close sockets after 45 seconds of inactivity
     });
-    console.log('MongoDB connected successfully');
+    console.log('MongoDB connected');
+    
+    // Add event listeners for connection health
+    mongoose.connection.on('connected', () => {
+      console.log('MongoDB connection re-established');
+    });
 
     mongoose.connection.on('disconnected', () => {
-      console.log('MongoDB disconnected');
+      console.warn('MongoDB disconnected! Attempting to reconnect...');
+      setTimeout(connectDB, 5000); // Reconnect after 5 seconds
     });
-    mongoose.connection.on('error', (err) => {
-      console.error('MongoDB connection error:', err);
-    });
-  } catch (error) {
-    console.error('MongoDB connection error:', error);
-    throw error; 
+
+  } catch (err) {
+    console.error('MongoDB connection error:', err);
+    process.exit(1);
   }
 };
 

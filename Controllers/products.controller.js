@@ -349,17 +349,16 @@ exports.getRelatedProductsExcludingSelectedProduct = async (req, res, next) => {
   }
 };
 
-exports.toggleLikeProduct = async (req, res, next) => {
+exports.toggleLikeProduct = async (req, res) => {
   try {
+    if (!req.user?.id) {
+      return res.status(401).json({ message: 'Authentication required' });
+    }
+    
     const productId = req.params.id;
-    const userId = req.user?.id || req.body.userId;
-    const result = await toggleLikeProduct(productId, userId);
-    res.status(200).json({
-      likedBy: result.likedBy,
-      dislikedBy: result.dislikedBy,
-      likes: result.likes,
-      dislikes: result.dislikes
-    });
+    const result = await toggleLikeProduct(productId, req.user.id);
+    
+    res.status(200).json(result);
   } catch (error) {
     console.error("Error toggling like:", error);
     res.status(500).json({ message: error.message });
@@ -368,17 +367,16 @@ exports.toggleLikeProduct = async (req, res, next) => {
 
 exports.toggleDislikeProduct = async (req, res, next) => {
   try {
+    if (!req.user?.id) {
+      return res.status(401).json({ message: 'Authentication required' });
+    }
+    
     const productId = req.params.id;
-    const userId = req.user?.id || req.body.userId;
-    const result = await toggleDislikeProduct(productId, userId);
-    res.status(200).json({
-      likedBy: result.likedBy,
-      dislikedBy: result.dislikedBy,
-      likes: result.likes,
-      dislikes: result.dislikes
-    });
+    const result = await toggleDislikeProduct(productId, req.user.id);
+    
+    res.status(200).json(result);
   } catch (error) {
-    console.error("Error toggling dislike:", error);
+    console.error("Error toggling like:", error);
     res.status(500).json({ message: error.message });
   }
 };

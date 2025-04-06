@@ -11,20 +11,19 @@ const {
 
 module.exports = (io) => {
   io.use((socket, next) => {
-    const token = socket.handshake.auth.token; // Expect token from client
-    if (!token) {
-      return next(new Error('Authentication required'));
-    }
-
-    jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key', (err, decoded) => {
+    const token = socket.handshake.auth.token;
+    console.log('Socket auth token:', token?.slice(0, 15)); // Log first 15 chars
+    
+    jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => { // Remove fallback
       if (err) {
-        return next(new Error('Invalid or expired token'));
+        console.error('Socket auth error:', err.message);
+        return next(new Error('Invalid token'));
       }
-      socket.user = decoded; // Attach user data
+      socket.user = decoded;
       next();
     });
   });
-
+  
   io.on('connection', socket => {
     console.log('New socket connection. User:', socket.user);
 
