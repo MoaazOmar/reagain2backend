@@ -1,5 +1,5 @@
 const jwt = require('jsonwebtoken');
-const { loginForUser } = require('../Models/auth.model');
+const { loginForUser  , createNewUser} = require('../Models/auth.model');
 const { validationResult } = require('express-validator');
 const ADMIN_USER_IDS = require('../Config/isAdmin');
 
