@@ -1,13 +1,12 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
-const mongoose = require('mongoose');
+const { connectDB } = require('./Config/database.config');
 const app = express();
 const port = process.env.PORT || 8000;
 console.log('Using port:', port);
 
 const homeRouter = require('./Routes/home.route');
-const connectToDB = require('./Config/database.config');
 const productRouter = require('./Routes/singleProduct.route');
 const allProductRouter = require('./Routes/products.route');
 const authRouter = require('./Routes/auth.route');
@@ -18,27 +17,22 @@ const orderRouter = require('./Routes/order.route');
 
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
-
 app.use(express.static(path.join(__dirname, 'assets')));
-app.use(express.static(path.join(__dirname, 'images')));
 app.use('/images', express.static(path.join(__dirname, 'images')));
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.use(cors({
-    origin: 'https://moaazomar.github.io',
-    credentials: true, // Keep for consistency, though not needed for JWT
-    allowedHeaders: ['Content-Type', 'Authorization'],
-    exposedHeaders: ['Authorization']
-  }));
-  
-  
-app.set('trust proxy', 1); // For Koyeb’s load balancer
+  origin: 'https://moaazomar.github.io',
+  credentials: true,
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  exposedHeaders: ['Authorization']
+}));
+app.set('trust proxy', 1);
 
-// Middleware to log requests (optional, for debugging)
 app.use((req, res, next) => {
-    console.log('Request URL:', req.url);
-    console.log('Request Headers:', req.headers);
-    next();
+  console.log('Request URL:', req.url);
+  console.log('Request Headers:', req.headers);
+  next();
 });
 
 app.set('view engine', 'ejs');
@@ -48,19 +42,18 @@ const http = require('http');
 const server = http.createServer(app);
 const { Server } = require('socket.io');
 const io = new Server(server, {
-    cors: {
-        origin: 'https://moaazomar.github.io',
-        methods: ['GET', 'POST'],
-        credentials: true
-    }
+  cors: {
+    origin: 'https://moaazomar.github.io',
+    methods: ['GET', 'POST'],
+    credentials: true
+  }
 });
 
-// Assuming you still need Socket.io (no session middleware needed now)
 io.on('connection', (socket) => {
-    socket.on('joinRoom', (roomId) => {
-        console.log('Socket joining room:', roomId);
-        socket.join(roomId);
-    });
+  socket.on('joinRoom', (roomId) => {
+    console.log('Socket joining room:', roomId);
+    socket.join(roomId);
+  });
 });
 
 app.use('/cart', cartRouter);
@@ -72,8 +65,16 @@ app.use('/form', formRouter);
 app.use('/order', orderRouter);
 app.use('/', homeRouter);
 
-connectToDB.connectDB();
+const startServer = async () => {
+  try {
+    await connectDB(); // Single connection at startup
+    server.listen(port, () => {
+      console.log(`Server is running on port ${port}`);
+    });
+  } catch (error) {
+    console.error('Failed to start server:', error);
+    process.exit(1);
+  }
+};
 
-server.listen(port, () => {
-    console.log(`Server is running on port ${port}`);
-});
+startServer();
