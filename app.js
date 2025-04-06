@@ -72,8 +72,16 @@ app.use('/form', formRouter);
 app.use('/order', orderRouter);
 app.use('/', homeRouter);
 
-connectToDB.connectDB();
-
+connectToDB.connectDB().then(() => {
+    server.listen(port, () => {
+      console.log(`Server is running on port ${port}`);
+    });
+  }).catch(err => {
+    console.error('Failed to connect to MongoDB:', err);
+    process.exit(1);
+  });
+  
+  
 server.listen(port, () => {
     console.log(`Server is running on port ${port}`);
 });

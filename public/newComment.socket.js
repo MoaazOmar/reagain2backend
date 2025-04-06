@@ -23,6 +23,7 @@ module.exports = (io) => {
         return next(new Error('Invalid token'));
       }
       socket.user = decoded;
+      console.log('Socket authenticated. User:', decoded);
       next();
     });
   });
@@ -42,7 +43,7 @@ module.exports = (io) => {
     });
 
     socket.on('newComment', async (data) => {
-      console.log('Received newComment event:', data); // Add this
+      console.log('Received newComment event:', data);
       try {
         const userId = socket.user?.id;
         if (!userId) {
@@ -51,7 +52,7 @@ module.exports = (io) => {
         const { productId } = data;
         const { text, parentId, rating } = data.comment;
         const newComment = await pushTheCommentToProduct(productId, userId, text, parentId, rating);
-        console.log('Emitting receiveComment to room:', productId, 'Comment:', newComment); // Add this
+        console.log('Emitting receiveComment to room:', productId, 'Comment:', newComment);
         io.to(productId).emit('receiveComment', { productId, comment: newComment });
       } catch (error) {
         console.error('Error handling newComment:', error);
@@ -59,7 +60,6 @@ module.exports = (io) => {
       }
     });
 
-    // Rest of the code remains unchanged...
     socket.on('editComment', async (data) => {
       try {
         const userId = socket.user?.id;

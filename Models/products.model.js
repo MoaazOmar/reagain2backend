@@ -375,7 +375,7 @@
       };    
       const pushTheCommentToProduct = async (productId, userId, commentText, parentId = null, rating = null) => {
         try {
-            await connectDB();
+            // await connectDB();
             const newComment = {
                 user: userId,
                 text: commentText,
