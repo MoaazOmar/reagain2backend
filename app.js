@@ -15,7 +15,7 @@ const cartRouter = require('./Routes/cart.route');
 const adminRouter = require('./Routes/admin.route');
 const formRouter = require('./Routes/form.route');
 const orderRouter = require('./Routes/order.route');
-const newCommentSocket = require('./sockets/newComment.socket.js'); // Adjust the path as needed
+const newCommentSocket = require('./public/newComment.socket')
 newCommentSocket(io);
 
 app.use(express.urlencoded({ extended: true }));
