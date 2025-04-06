@@ -11,7 +11,7 @@ const {
 
 module.exports = (io) => {
   io.use((socket, next) => {
-    const token = socket.handshake.auth.token;
+    const token = socket.handshake.headers.authorization?.split(' ')[1];
     console.log('Socket auth token:', token?.slice(0, 15)); // Log first 15 chars
     
     jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => { // Remove fallback
@@ -23,7 +23,7 @@ module.exports = (io) => {
       next();
     });
   });
-  
+
   io.on('connection', socket => {
     console.log('New socket connection. User:', socket.user);
 
