@@ -185,7 +185,7 @@ exports.getProductList = async (req, res, next) => {
         await connectDB()
     const products = await getAllProducts();
       console.log('Fetched products:', products);
-      res.status(200).json({ products });
+      res.status(200).json(products);    
     } catch (error) {
       console.error('Error fetching products:', error);
       res.status(500).json({ message: 'Failed to fetch product list', error: error.message });
