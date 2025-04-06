@@ -14,13 +14,7 @@ const connectDB = async () => {
     }
 
     await mongoose.connect(uri, {
-      serverSelectionTimeoutMS: 5000,
-      keepAlive: true,
-      // Keep your options if they’re intentional
-      tls: true,
-      tlsAllowInvalidCertificates: false,
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
+      serverSelectionTimeoutMS: 5000, // Timeout for initial connection
     });
     console.log('MongoDB connected successfully');
   } catch (error) {
