@@ -183,7 +183,7 @@ exports.updateOrderStatus = async (req, res, next) => {
 exports.getProductList = async (req, res, next) => {
     try {
         await connectDB()
-      const products = await Product.find();
+    const products = await getAllProducts();
       console.log('Fetched products:', products);
       res.status(200).json({ products });
     } catch (error) {
