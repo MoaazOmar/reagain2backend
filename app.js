@@ -3,7 +3,7 @@ const cors = require('cors');
 const path = require('path');
 const mongoose = require('mongoose');
 const app = express();
-const port = process.env.port || 8000;
+const port = process.env.PORT || 8000;
 console.log('Using port:', port);
 
 const homeRouter = require('./Routes/home.route');
@@ -29,8 +29,9 @@ app.use(cors({
     credentials: true, // Keep for consistency, though not needed for JWT
     allowedHeaders: ['Content-Type', 'Authorization'],
     exposedHeaders: ['Authorization']
-}));
-
+  }));
+  
+  
 app.set('trust proxy', 1); // For Koyeb’s load balancer
 
 // Middleware to log requests (optional, for debugging)
@@ -54,7 +55,7 @@ const io = new Server(server, {
     }
 });
 
-// Socket.io connection handling
+// Assuming you still need Socket.io (no session middleware needed now)
 io.on('connection', (socket) => {
     socket.on('joinRoom', (roomId) => {
         console.log('Socket joining room:', roomId);
@@ -62,7 +63,6 @@ io.on('connection', (socket) => {
     });
 });
 
-// Routes
 app.use('/cart', cartRouter);
 app.use('/auth', authRouter);
 app.use('/product', productRouter);
@@ -72,14 +72,8 @@ app.use('/form', formRouter);
 app.use('/order', orderRouter);
 app.use('/', homeRouter);
 
-// Start server only after DB connection is established
-connectToDB.connectDB()
-    .then(() => {
-        server.listen(port, () => {
-            console.log(`Server is running on port ${port}`);
-        });
-    })
-    .catch((err) => {
-        console.error('Failed to start server due to database connection error:', err);
-        process.exit(1); // Exit process if connection fails
-    });
+connectToDB.connectDB();
+
+server.listen(port, () => {
+    console.log(`Server is running on port ${port}`);
+});
