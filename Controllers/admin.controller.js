@@ -182,23 +182,15 @@ exports.updateOrderStatus = async (req, res, next) => {
 
 exports.getProductList = async (req, res, next) => {
     try {
-        const products = await getAllProducts();
-        res.status(200).json({
-            products,
-            messages: {
-                error: req.flash('error'),
-                success: req.flash('success')
-            },
-            isAdmin: req.user ? req.user.isAdmin : false,
-            Userid: req.user ? req.user.id : null
-        });
+        await connectDB()
+      const products = await Product.find();
+      console.log('Fetched products:', products);
+      res.status(200).json({ products });
     } catch (error) {
-        console.error("Error fetching products:", error);
-        res.status(500).json({
-            message: 'Failed to fetch product list'
-        });
+      console.error('Error fetching products:', error);
+      res.status(500).json({ message: 'Failed to fetch product list', error: error.message });
     }
-};
+  };
 
 exports.updateProduct = [
     upload.array('image', 10),
