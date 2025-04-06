@@ -3,10 +3,10 @@ const mongoose = require('mongoose');
 const connectDB = async () => {
   try {
     const uri = process.env.MONGODB_URI;
-    console.log('Attempting to connect to MongoDB with URI:', uri);
     if (!uri) {
-      throw new Error("MONGODB_URI environment variable is not set");
+      throw new Error('MONGODB_URI environment variable is not set');
     }
+    console.log('Attempting to connect to MongoDB with URI:', uri);
     await mongoose.connect(uri, {
       tls: true,
       tlsAllowInvalidCertificates: false,
@@ -24,7 +24,7 @@ const connectDB = async () => {
     });
   } catch (error) {
     console.error('MongoDB connection error:', error);
-    console.warn('Failed to connect to MongoDB. Continuing without database connection...');
+    throw error; 
   }
 };
 
