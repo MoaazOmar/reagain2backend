@@ -12,9 +12,12 @@ const {
 module.exports = (io) => {
   io.use((socket, next) => {
     const token = socket.handshake.headers.authorization?.split(' ')[1];
-    console.log('Socket auth token:', token?.slice(0, 15)); // Log first 15 chars
-    
-    jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => { // Remove fallback
+    console.log('Socket auth token:', token?.slice(0, 15));
+    if (!token) {
+      console.error('No token provided in socket handshake');
+      return next(new Error('No token provided'));
+    }
+    jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
       if (err) {
         console.error('Socket auth error:', err.message);
         return next(new Error('Invalid token'));
@@ -39,6 +42,7 @@ module.exports = (io) => {
     });
 
     socket.on('newComment', async (data) => {
+      console.log('Received newComment event:', data); // Add this
       try {
         const userId = socket.user?.id;
         if (!userId) {
@@ -47,6 +51,7 @@ module.exports = (io) => {
         const { productId } = data;
         const { text, parentId, rating } = data.comment;
         const newComment = await pushTheCommentToProduct(productId, userId, text, parentId, rating);
+        console.log('Emitting receiveComment to room:', productId, 'Comment:', newComment); // Add this
         io.to(productId).emit('receiveComment', { productId, comment: newComment });
       } catch (error) {
         console.error('Error handling newComment:', error);
@@ -54,6 +59,7 @@ module.exports = (io) => {
       }
     });
 
+    // Rest of the code remains unchanged...
     socket.on('editComment', async (data) => {
       try {
         const userId = socket.user?.id;
