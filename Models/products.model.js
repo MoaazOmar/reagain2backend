@@ -64,7 +64,7 @@
         colors: [String],
         price: Number,
         description: String,
-        descriptionDetailed: String,
+        descriptionDetailed:String,
         category: String,
         season: String,
         gender: {
@@ -77,7 +77,7 @@
         },
         likedBy: {
             type: [mongoose.Schema.Types.ObjectId], // Changed from [String]
-            ref: 'User', // Reference to User model
+            ref: 'User',                            // Reference to User model
             default: []
         },
         dislikes: {
@@ -86,19 +86,19 @@
         },
         dislikedBy: {
             type: [mongoose.Schema.Types.ObjectId], // Changed from [String]
-            ref: 'User', // Reference to User model
+            ref: 'User',                            // Reference to User model
             default: []
         },
         sizes: [String],
 
-        stock: {
+            stock: {
             type: Boolean, // Add stock field
             default: true
         },
         quantity: {
             type: Number,
             default: 0 // Add quantity field
-        },
+          },        
         comments: [commentSchema],
         ratings: [{
             user: {
@@ -117,7 +117,7 @@
     }, {
         timestamps: true,
         collection: 'products'
-    });
+    } ) ;
 
     // Create the model
     const Product = mongoose.model('product', productSchema);
@@ -318,7 +318,7 @@
                 mainProducts,
                 total
             };
-        } catch (error) {
+        } catch  (error){
             console.error('Error occuring during fetching products:', error);
             throw error;
 
@@ -358,40 +358,22 @@
 
     const getDistinctColorsWithCounts = async (filterQuery) => {
         try {
-            await connectDB()
-            const colors = await Product.aggregate([{
-                    $match: filterQuery
-                },
-                {
-                    $unwind: '$colors'
-                }, // Flatten the array
-                {
-                    $group: {
-                        _id: {
-                            $toLower: '$colors'
-                        },
-                        count: {
-                            $sum: 1
-                        }
-                    }
-                },
-                {
-                    $project: {
-                        _id: 0,
-                        name: '$_id',
-                        count: '$count'
-                    }
-                }
-            ]);
-            return colors;
+         await connectDB()
+          const colors = await Product.aggregate([
+            { $match: filterQuery },
+            { $unwind: '$colors' }, // Flatten the array
+            { $group: { _id: { $toLower: '$colors' }, count: { $sum: 1 } } },
+            { $project: { _id: 0, name: '$_id', count: '$count' } }
+          ]);
+          return colors;
         } catch (error) {
-            console.error('Error fetching colors:', error);
-            throw error;
-        } finally {
+          console.error('Error fetching colors:', error);
+          throw error;
+        }finally{
             await disconnectDB()
         }
-    };
-    const pushTheCommentToProduct = async (productId, userId, commentText, parentId = null, rating = null) => {
+      };    
+      const pushTheCommentToProduct = async (productId, userId, commentText, parentId = null, rating = null) => {
         try {
             await connectDB();
             const newComment = {
@@ -408,21 +390,18 @@
                     }
                 }, {
                     new: true
-                }
-            ).populate({
-                path: 'comments.user',
-                select: 'username'
-            });
+                } // Return the updated document
+            ).populate('comments.user', 'username'); // Populate user info
+            console.log('Newly added comment:', updatedProduct.comments[updatedProduct.comments.length - 1]);
+            return updatedProduct.comments[updatedProduct.comments.length - 1] // return the last comment
 
-            // Get the last comment (newly added)
-            const newCommentDoc = updatedProduct.comments[updatedProduct.comments.length - 1];
-            return newCommentDoc;
         } catch (error) {
+            console.error('Error adding comment:', error);
             throw error;
-        } finally {
-            await disconnectDB();
+        }finally{
+            await disconnectDB()
         }
-    };
+    }
     const editComment = async (productId, commentId, userId, newText, isAdmin) => {
         try {
             await connectDB();
@@ -607,83 +586,75 @@
 
     const toggleLikeProduct = async (productId, userId) => {
         try {
-            await connectDB();
-            const products = await Product.find({
-                _id: productId
-            });
-            if (!products || products.length === 0) {
-                throw new Error('Product not found');
-            }
-            const product = products[0];
-            const userIdStr = userId.toString();
-
-            // Check if the user already liked the product
-            if (product.likedBy.some(id => id.toString() === userIdStr)) {
-                // Remove from likedBy if already liked
-                product.likedBy = product.likedBy.filter(id => id.toString() !== userIdStr);
-            } else {
-                // Add to likedBy and remove from dislikedBy if present
-                product.likedBy.push(userId);
-                product.dislikedBy = product.dislikedBy.filter(id => id.toString() !== userIdStr);
-            }
-
-            // Update counts
-            product.likes = product.likedBy.length;
-            product.dislikes = product.dislikedBy.length;
-
-            await product.save();
-            return product;
+          await connectDB();
+          const products = await Product.find({ _id: productId });
+          if (!products || products.length === 0) {
+            throw new Error('Product not found');
+          }
+          const product = products[0];
+          const userIdStr = userId.toString();
+      
+          // Check if the user already liked the product
+          if (product.likedBy.some(id => id.toString() === userIdStr)) {
+            // Remove from likedBy if already liked
+            product.likedBy = product.likedBy.filter(id => id.toString() !== userIdStr);
+          } else {
+            // Add to likedBy and remove from dislikedBy if present
+            product.likedBy.push(userId);
+            product.dislikedBy = product.dislikedBy.filter(id => id.toString() !== userIdStr);
+          }
+          
+          // Update counts
+          product.likes = product.likedBy.length;
+          product.dislikes = product.dislikedBy.length;
+          
+          await product.save();
+          return product;
         } catch (error) {
-            console.error('Error toggling like:', error);
-            throw error;
+          console.error('Error toggling like:', error);
+          throw error;
         }
-    };
-    const toggleDislikeProduct = async (productId, userId) => {
+      };
+      const toggleDislikeProduct = async (productId, userId) => {
         try {
-            await connectDB();
-            const products = await Product.find({
-                _id: productId
-            });
-            if (!products || products.length === 0) {
-                throw new Error('Product not found');
-            }
-            const product = products[0];
-            const userIdStr = userId.toString();
-
-            // Check if the user already disliked the product
-            if (product.dislikedBy.some(id => id.toString() === userIdStr)) {
-                // Remove from dislikedBy if already disliked
-                product.dislikedBy = product.dislikedBy.filter(id => id.toString() !== userIdStr);
-            } else {
-                // Add to dislikedBy and remove from likedBy if present
-                product.dislikedBy.push(userId);
-                product.likedBy = product.likedBy.filter(id => id.toString() !== userIdStr);
-            }
-
-            // Update counts
-            product.likes = product.likedBy.length;
-            product.dislikes = product.dislikedBy.length;
-
-            await product.save();
-            return product;
+          await connectDB();
+          const products = await Product.find({ _id: productId });
+          if (!products || products.length === 0) {
+            throw new Error('Product not found');
+          }
+          const product = products[0];
+          const userIdStr = userId.toString();
+      
+          // Check if the user already disliked the product
+          if (product.dislikedBy.some(id => id.toString() === userIdStr)) {
+            // Remove from dislikedBy if already disliked
+            product.dislikedBy = product.dislikedBy.filter(id => id.toString() !== userIdStr);
+          } else {
+            // Add to dislikedBy and remove from likedBy if present
+            product.dislikedBy.push(userId);
+            product.likedBy = product.likedBy.filter(id => id.toString() !== userIdStr);
+          }
+          
+          // Update counts
+          product.likes = product.likedBy.length;
+          product.dislikes = product.dislikedBy.length;
+          
+          await product.save();
+          return product;
         } catch (error) {
-            console.error('Error toggling dislike:', error);
-            throw error;
+          console.error('Error toggling dislike:', error);
+          throw error;
         }
-    };
-    const getWinterProductsData = async (gender) => {
+      };
+      const getWinterProductsData = async (gender) => {
         try {
-            const filter = {
-                season: 'Winter'
-            };
+            const filter = { season: 'Winter' };
             if (gender && gender !== 'all') {
                 filter.gender = gender;
             }
             await connectDB()
             const products = await Product.find(filter)
-                .sort({
-                    _id: 1
-                })
+                .sort({ _id: 1 })
                 .limit(10);
             return products;
         } catch (error) {
@@ -693,30 +664,25 @@
             await disconnectDB()
         }
     }
-    const getSummerAndSpringProductsData = async (gender) => {
-        try {
+    const getSummerAndSpringProductsData = async (gender) =>{
+        try{
             await connectDB()
-            const filter = {
-                season: {
-                    $in: ['Summer', 'Spring']
-                }
-            };
-            if (gender && gender !== 'all') {
+            const filter = { season: { $in: ['Summer', 'Spring'] } };
+            if(gender && gender !== 'all') {
                 filter.gender = gender;
             }
-            const products = await Product.find(filter).sort({
-                _id: -1
-            }).limit(15)
+            const products = await Product.find(filter).sort({_id: -1}).limit(15)
             return products
-        } catch (error) {
+        }
+        catch(error){
             console.error('Error fetching Summer products:', error)
             throw new Error(error.message); // Proper error construction
 
-        } finally {
+        }finally {
             await disconnectDB()
         }
     }
-
+         
     module.exports = {
         Product,
         getAllProducts,
