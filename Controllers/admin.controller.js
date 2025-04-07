@@ -20,6 +20,23 @@ const fs = require('fs');
 const path = require('path');
 
 
+
+app.get('/debug/images', (req, res) => {
+    const dir = path.join(__dirname, 'images');
+    console.log('Checking directory:', dir);
+    fs.readdir(dir, (err, files) => {
+        if (err) {
+            console.error('Error reading images dir:', err);
+            return res.status(500).json({ error: err.message });
+        }
+        console.log('Files in images dir:', files);
+        res.json({ files });
+    });
+});
+
+
+
+
 exports.getAdd = (req, res, next) => {
     res.status(200).json({
         messages: {
@@ -35,13 +52,20 @@ exports.postAdd = [
     upload.array('image', 10),
     async (req, res) => {
         try {
+            console.log('Request body:', req.body);
+            console.log('Uploaded files:', req.files);
+
+
             if (!req.files || req.files.length === 0) {
                 return res.status(400).json({
                     message: 'At least one image is required'
                 });
             }
 
-            const images = req.files.map(file => file.filename);
+            const images = req.files.map(file => {
+                console.log('File saved at:', file.path);
+                return file.filename;
+            });
             const {
                 name,
                 category,
