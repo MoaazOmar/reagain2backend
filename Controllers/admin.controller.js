@@ -20,23 +20,6 @@ const fs = require('fs');
 const path = require('path');
 
 
-
-app.get('/debug/images', (req, res) => {
-    const dir = path.join(__dirname, 'images');
-    console.log('Checking directory:', dir);
-    fs.readdir(dir, (err, files) => {
-        if (err) {
-            console.error('Error reading images dir:', err);
-            return res.status(500).json({ error: err.message });
-        }
-        console.log('Files in images dir:', files);
-        res.json({ files });
-    });
-});
-
-
-
-
 exports.getAdd = (req, res, next) => {
     res.status(200).json({
         messages: {
@@ -49,23 +32,21 @@ exports.getAdd = (req, res, next) => {
 };
 
 exports.postAdd = [
-    upload.array('image', 10),
+    require('../path-to-upload-middleware').array('image', 10), // Import the upload config
     async (req, res) => {
         try {
-            console.log('Request body:', req.body);
-            console.log('Uploaded files:', req.files);
-
-
+            // Debugging: Log the received files
             if (!req.files || req.files.length === 0) {
+                console.error('No files uploaded!');
                 return res.status(400).json({
                     message: 'At least one image is required'
                 });
             }
 
-            const images = req.files.map(file => {
-                console.log('File saved at:', file.path);
-                return file.filename;
-            });
+            const images = req.files.map(file => file.filename);
+            console.log('Uploaded files:', images); // Debugging log
+
+            // Extract product details from the request body
             const {
                 name,
                 category,
@@ -80,6 +61,11 @@ exports.postAdd = [
                 stock
             } = req.body;
 
+            // Parse JSON fields (if they are strings)
+            const parsedGender = JSON.parse(gender);
+            const parsedSizes = JSON.parse(sizes);
+            const parsedColors = JSON.parse(colors);
+
             const newProduct = new Product({
                 name,
                 image: images,
@@ -87,14 +73,15 @@ exports.postAdd = [
                 brand,
                 price: Number(price),
                 season,
-                gender: JSON.parse(gender),
+                gender: parsedGender,
                 description,
                 descriptionDetailed,
-                sizes: JSON.parse(sizes),
-                colors: JSON.parse(colors),
+                sizes: parsedSizes,
+                colors: parsedColors,
                 stock: Number(stock)
             });
 
+            // Save the new product to the database
             await newProduct.save();
             res.status(201).json({
                 message: 'Product created successfully',
@@ -108,7 +95,6 @@ exports.postAdd = [
         }
     }
 ];
-
 exports.getOrders = async (req, res, next) => {
     try {
         let status = req.query.status;
