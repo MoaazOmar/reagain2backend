@@ -8,6 +8,7 @@ const cartSchema = mongoose.Schema({
     userID: String,
     productID: String,
     image: String,
+    color: String,
     timestamp: {
         type: Date,
         default: Date.now // Use Date type for timestamp

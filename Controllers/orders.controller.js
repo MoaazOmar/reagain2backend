@@ -17,6 +17,10 @@ exports.getOrderUser = async (req, res, next) => {
     }
 };
 
+
+const userId = req.user.id;
+
+
 exports.placeOrder = async (req, res, next) => {
     try {
         console.log('Request body:', req.body);
@@ -49,6 +53,7 @@ exports.placeOrder = async (req, res, next) => {
                 price: item.price,
                 amount: item.amount,
                 image: item.image,
+                color: item.color, // Add color from cart item
                 status: 'Pending'
             }))
         };        

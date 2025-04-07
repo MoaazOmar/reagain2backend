@@ -31,6 +31,7 @@ exports.postCart = async (req, res, next) => {
             productID: req.body.productID,
             userID: req.user.id,
             image: req.body.image,
+            color: req.body.color,
             timestamp: Date.now()
         });
         res.status(201).json({ message: 'The product was added to the cart successfully', item: newItem });
