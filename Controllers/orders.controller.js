@@ -18,7 +18,6 @@ exports.getOrderUser = async (req, res, next) => {
 };
 
 
-const userId = req.user.id;
 
 
 exports.placeOrder = async (req, res, next) => {
