@@ -18,6 +18,7 @@ const {
 } = require('../Models/products.model');
 const fs = require('fs');
 const path = require('path');
+const fsExtra = require('fs-extra');
 
 
 exports.getAdd = (req, res, next) => {
@@ -32,21 +33,22 @@ exports.getAdd = (req, res, next) => {
 };
 
 exports.postAdd = [
-    require('../path-to-upload-middleware').array('image', 10), // Import the upload config
+    upload.array('image', 10),
     async (req, res) => {
         try {
-            // Debugging: Log the received files
             if (!req.files || req.files.length === 0) {
-                console.error('No files uploaded!');
                 return res.status(400).json({
                     message: 'At least one image is required'
                 });
             }
 
-            const images = req.files.map(file => file.filename);
-            console.log('Uploaded files:', images); // Debugging log
+            // Copy the uploaded files to a persistent storage directory
+            const newImagePaths = await Promise.all(req.files.map(async (file) => {
+                const newFilePath = path.join(__dirname, '../persistentImages', file.filename);  // Set the persistent directory
+                await fsExtra.copy(file.path, newFilePath);  // Copy the file
+                return '/persistentImages/' + file.filename; // Save the relative path to the database
+            }));
 
-            // Extract product details from the request body
             const {
                 name,
                 category,
@@ -61,27 +63,21 @@ exports.postAdd = [
                 stock
             } = req.body;
 
-            // Parse JSON fields (if they are strings)
-            const parsedGender = JSON.parse(gender);
-            const parsedSizes = JSON.parse(sizes);
-            const parsedColors = JSON.parse(colors);
-
             const newProduct = new Product({
                 name,
-                image: images,
+                image: newImagePaths,  // Save the new paths in the database
                 category,
                 brand,
                 price: Number(price),
                 season,
-                gender: parsedGender,
+                gender: JSON.parse(gender),
                 description,
                 descriptionDetailed,
-                sizes: parsedSizes,
-                colors: parsedColors,
+                sizes: JSON.parse(sizes),
+                colors: JSON.parse(colors),
                 stock: Number(stock)
             });
 
-            // Save the new product to the database
             await newProduct.save();
             res.status(201).json({
                 message: 'Product created successfully',
@@ -95,6 +91,7 @@ exports.postAdd = [
         }
     }
 ];
+
 exports.getOrders = async (req, res, next) => {
     try {
         let status = req.query.status;
@@ -202,7 +199,7 @@ exports.getProductList = async (req, res, next) => {
     }
   };
 
-exports.updateProduct = [
+  exports.updateProduct = [
     upload.array('image', 10),
     async (req, res, next) => {
         const {
@@ -223,9 +220,15 @@ exports.updateProduct = [
             let imagesToDelete = [];
             if (req.body.imagesToDelete) {
                 imagesToDelete = JSON.parse(req.body.imagesToDelete);
-                await Promise.all(imagesToDelete.map(filename =>
-                    fs.promises.unlink(path.join(__dirname, '../images', filename)).catch(err => console.error(`Failed to delete ${filename}:`, err))
-                ));
+                // Delete the images from the local storage (using fs-extra)
+                await Promise.all(imagesToDelete.map(async (filename) => {
+                    const filePath = path.join(__dirname, '../images', filename);
+                    try {
+                        await fsExtra.remove(filePath);  // Removes the file from the local storage
+                    } catch (err) {
+                        console.error(`Failed to delete ${filename}:`, err);
+                    }
+                }));
             }
 
             const updateData = {
@@ -247,19 +250,28 @@ exports.updateProduct = [
                 });
             }
 
+            // If images need to be deleted, update the image field
             if (imagesToDelete.length > 0) {
                 product.image = product.image.filter(img => !imagesToDelete.includes(img));
                 updateData.image = product.image;
             }
 
+            // Handle new file uploads (copy them to a persistent folder or use cloud)
             if (req.files && req.files.length > 0) {
-                const newImages = req.files.map(file => file.filename);
-                updateData.image = [...(updateData.image || product.image), ...newImages];
+                const newImages = req.files.map(async (file) => {
+                    const newFilePath = path.join(__dirname, '../persistentImages', file.filename);
+                    // Copy file to a persistent folder (use fs-extra to copy)
+                    await fsExtra.copy(file.path, newFilePath);
+                    return '/persistentImages/' + file.filename;
+                });
+
+                // Wait for all new image uploads
+                const newImagePaths = await Promise.all(newImages);
+                updateData.image = [...(updateData.image || product.image), ...newImagePaths];
             }
 
-            const updatedProduct = await Product.findByIdAndUpdate(productId, updateData, {
-                new: true
-            });
+            // Update the product
+            const updatedProduct = await Product.findByIdAndUpdate(productId, updateData, { new: true });
 
             res.status(200).json({
                 message: 'Product updated successfully',
